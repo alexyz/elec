@@ -10,6 +10,10 @@ import javax.swing.JFrame;
 
 import el.phys.Intersection;
 
+/**
+ * Moving square vs fixed square collision detection
+ * way too complicated
+ */
 class I2Test {
 	
 	public static void main(String[] args) {

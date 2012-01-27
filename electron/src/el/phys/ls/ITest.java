@@ -10,6 +10,9 @@ import java.util.Arrays;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 
+/**
+ * The original moving point vs fixed square collision detection
+ */
 class ITest {
 	
 	public static void main(String[] args) {

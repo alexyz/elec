@@ -20,6 +20,9 @@ import el.phys.Circle;
 import el.phys.Intersection;
 import el.phys.Rect;
 
+/**
+ * Seperate program to test the intersection function
+ */
 class I3Test extends JComponent implements MouseWheelListener, MouseListener, MouseMotionListener {
 	
 	static float _x0, _y0, _x1, _y1, _x2, _y2, _x3, _y3;
@@ -157,16 +160,21 @@ class I3Test extends JComponent implements MouseWheelListener, MouseListener, Mo
 	}
 	
 	/**
-	 * Return true if line intersects with square.
+	 * Return true if moving circle intersects with fixed square.
 	 * Optionally returns first intersection point (from l1 to l2).
 	 */
 	public static Intersection intersectsdebug(Rect r, Circle c, float tx, float ty, float bf) {
 		
+		// subtract radius of circle from square to make it a point
 		float rx0 = r.x0 - c.r;
 		float rx1 = r.x1 + c.r;
 		float ry0 = r.y0 - c.r;
 		float ry1 = r.y1 + c.r;
 
+		// consider translation line l1->l2 to be parameterised, e.g.
+		// any point on line = l1 + p(l2-l1) where p is 0 to 1
+		// now find values of p for the top, bottom, left and right of square (might not be 0-1)
+		
 		float px0 = (rx0 - c.x) / tx;
 		//_x0 = c.x + tx * px0;
 		//_y0 = c.y + ty * px0;
@@ -185,7 +193,7 @@ class I3Test extends JComponent implements MouseWheelListener, MouseListener, Mo
 
 
 		// if parameters for both x and y overlap, it intersects
-		// there are usually two points of intersection, return the one closest to l1 only
+		// there are usually two points of intersection (entry and exit), return the one closest to l1 only
 
 		float pxh, pxl;
 		if (px0 > px1) {
