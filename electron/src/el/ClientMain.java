@@ -1,16 +1,15 @@
 package el;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.net.Socket;
-import java.net.UnknownHostException;
 
 import javax.swing.*;
 
-public class Main {
+public class ClientMain {
 	static final PrintStream out = System.out;
-	static Timer t;
+	static Timer timer;
+	
 	public static void main(String[] args) {
 		final Model m = new Model();
 		final View v = new View(m);
@@ -24,6 +23,7 @@ public class Main {
 		
 		JMenuItem connectMenuItem = new JMenuItem("Connect");
 		connectMenuItem.addActionListener(new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
 					Socket s = new Socket("localhost", 8111);
@@ -48,23 +48,24 @@ public class Main {
 		f.pack();
 		f.setVisible(true);
 		
-		t = new Timer(50, new ActionListener() {
+		timer = new Timer(50, new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				m.update();
 				// should skip this if behind
 				v.paintImmediately(0, 0, v.getWidth(), v.getHeight());
 			}
 		});
-		t.start();
+		timer.start();
 	}
 	static void faster() {
-		t.setDelay(t.getDelay() - 1);
+		timer.setDelay(timer.getDelay() - 1);
 	}
 	static void slower() {
-		t.setDelay(t.getDelay() + 1);
+		timer.setDelay(timer.getDelay() + 1);
 	}
 	static int delay() {
-		return t.getDelay();
+		return timer.getDelay();
 	}
 }
 

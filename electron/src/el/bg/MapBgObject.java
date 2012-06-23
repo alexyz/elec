@@ -6,7 +6,7 @@ import java.util.*;
 
 import el.fg.FgObject;
 import el.phys.Circle;
-import el.phys.IntersectionFunction;
+import el.phys.Intersect;
 import el.phys.Intersection;
 
 /*
@@ -47,7 +47,7 @@ public class MapBgObject extends BgObject {
 	}
 	
 	@Override
-	public Intersection intersects(IntersectionFunction i, Circle c, float tx, float ty) {
+	public Intersection intersects(Intersect i, Circle c, float tx, float ty) {
 		// need to know if line intersects with any tile
 		//println("checking map intersect with %f,%f -> %f,%f", lx1, ly1, lx2, ly2);
 		Intersection r;

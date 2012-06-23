@@ -1,15 +1,12 @@
 package el;
+
 import java.io.PrintStream;
 import java.util.*;
 
-import el.phys.Circle;
-import el.phys.IntersectionFunction;
-import el.phys.Intersection;
-import el.phys.Trans;
+import el.phys.*;
 import el.phys.cs.CSIntersect;
 import el.bg.*;
 import el.fg.*;
-import static el.FMath.*;
 
 /** 
  * 1M squared.
@@ -19,25 +16,28 @@ import static el.FMath.*;
  * mx, my - model co-ordinates
  * qx, qy - model quadrant co-ordinates (for some quadrant size)
  * dx, dy - deltas in px/sec
- * 
- * TODO radar
- * 
- * */
+ */
 public class Model {
 	
-	static final PrintStream log = System.out; 
+	static final PrintStream out = System.out; 
 	public static final int centrex = 500000, centrey = 500000;
 	
 	//
 	// constants
 	//
 	
+	/**
+	 * permanent foreground objects (ships)
+	 */
 	private final ArrayList<FgObject> objects = new ArrayList<FgObject>();
+	/**
+	 * transient foreground objects (bullets)
+	 */
 	private final LinkedList<FgObject> transObjects = new LinkedList<FgObject>();
-	private final HashMap<String,Runnable> actionMap = new HashMap<String,Runnable>();
-	private final ArrayList<Runnable> actions = new ArrayList<Runnable>();
+	private final ActionMap actionMap = new ActionMap();
+	private final ArrayList<FgRunnable> actions = new ArrayList<FgRunnable>();
 	private final FgObject modelObj = new ModelObject();
-	private final long startt = System.nanoTime();
+	private final long startTime = System.nanoTime();
 	/**
 	 * The map (transients may collide with it)
 	 */
@@ -50,80 +50,28 @@ public class Model {
 	/**
 	 * Collision detection
 	 */
-	private final IntersectionFunction i = new CSIntersect();
+	private final Intersect i = new CSIntersect();
 	
 	//
 	// variables
 	//
 	
-	private float elapsedt;
+	private float elapsedTime;
 	private FgObject focusObj = modelObj;
 	private long servertime = 0;
-	private ServerThread st;
+	private ServerThread serverThread;
 	
 	// need two layers
 	public Model() {
-		// TODO a separate actions object
-		actionMap.put("up", new Runnable() {
-			public void run() {
-				focusObj.up();
-			}
-			public String toString() {
-				return "up";
-			}
-		});
-		actionMap.put("down", new Runnable() {
-			public void run() {
-				focusObj.down();
-			}
-			public String toString() {
-				return "down";
-			}
-		});
-		actionMap.put("left", new Runnable() {
-			public void run() {
-				focusObj.left();
-			}
-			public String toString() {
-				return "left";
-			}
-		});
-		actionMap.put("right", new Runnable() {
-			public void run() {
-				focusObj.right();
-			}
-			public String toString() {
-				return "right";
-			}
-		});
-		actionMap.put("fire1", new Runnable() {
-			public void run() {
-				focusObj.fire(0);
-			}
-			public String toString() {
-				return "fire1";
-			}
-		});
-		actionMap.put("fire2", new Runnable() {
-			public void run() {
-				focusObj.fire(1);
-			}
-			public String toString() {
-				return "fire2";
-			}
-		});
-		actionMap.put("fire3", new Runnable() {
-			public void run() {
-				focusObj.fire(2);
-			}
-			public String toString() {
-				return "fire3";
-			}
-		});
 		// TODO request this from server
 		addFgObject(new Ship(centrex - 20, centrey));
 		addFgObject(new Ship(centrex + 20, centrey));
 	}
+	
+	/**
+	 * focus next foreground object. in live game you should only be able to
+	 * focus one (your ship).
+	 */
 	void focusCycle() {
 		if (focusObj == modelObj) {
 			if (objects.size() > 0)
@@ -134,18 +82,21 @@ public class Model {
 		}
 		System.out.println("focus: " + focusObj);
 	}
+	
 	void update() {
-		float t = (System.nanoTime() - this.startt) / 1000000000.0f;
-		float td = t - this.elapsedt;
-		elapsedt = t;
+		float time = (System.nanoTime() - this.startTime) / 1000000000.0f;
+		float timeDelta = time - this.elapsedTime;
+		elapsedTime = time;
 		
+		// apply actions for focused object
 		if (actions.size() > 0) {
-			for (Runnable r : actions)
-				r.run();
+			for (FgRunnable r : actions) {
+				r.run(focusObj);
+			}
 		}
 		
 		for (FgObject o : objects) {
-			o.update(t, td);
+			o.update(time, timeDelta);
 		}
 		
 		if (transObjects.size() > 0) {
@@ -153,43 +104,49 @@ public class Model {
 			while (i.hasNext()) {
 				FgObject o = i.next();
 				// may inflict damage to objects
-				o.update(t, td);
-				if (o.remove())
+				o.update(time, timeDelta);
+				if (o.remove()) {
 					i.remove();
+				}
 			}
 		}
 		
 	}
 	
 	public float getTime() {
-		return elapsedt;
+		return elapsedTime;
 	}
 	
 	int getX() {
 		return focusObj.getX();
 	}
+	
 	int getY() {
 		return focusObj.getY();
 	}
+	
 	List<BgObject> getBgObjects() {
 		return bgObjects;
 	}
+	
 	List<FgObject> getFgObjects() {
 		return objects;
 	}
+	
 	List<FgObject> getTransFgObjects() {
 		return transObjects;
 	}
 	
 	void action(String name) {
-		Runnable action = actionMap.get(name);
+		FgRunnable action = actionMap.get(name);
 		if (action == null)
 			throw new RuntimeException(name);
 		if (!actions.contains(action))
 			actions.add(action);
 	}
+	
 	void unaction(String name) {
-		Runnable action = actionMap.get(name);
+		FgRunnable action = actionMap.get(name);
 		if (action == null)
 			throw new RuntimeException(name);
 		actions.remove(action);
@@ -198,35 +155,38 @@ public class Model {
 	@Override
 	public String toString() {
 		return String.format("Model[x,y=%d,%d t=%.2f objs=%d,%d]%s", 
-				getX(), getY(), elapsedt, objects.size(), transObjects.size(), actions);
+				getX(), getY(), elapsedTime, objects.size(), transObjects.size(), actions);
 	}
+	
 	public FgObject getFocus() {
 		return focusObj;
 	}
+	
 	public void addFgObject(FgObject obj) {
 		obj.setModel(this);
 		objects.add(obj);
 	}
+	
 	public void addTransObject(FgObject obj) {
-		log.println("addTransObject " + obj);
+		out.println("addTransObject " + obj);
 		
-		if (st == null) {
+		if (serverThread == null) {
 			obj.setModel(this);
 			transObjects.add(obj); 
 			
 		} else {
 			// TODO inform server
-			long t = st.getServerTime();
+			long t = serverThread.getServerTime();
 			String msg = String.format("%d %f addTrans %s", t, getTime(), obj.write());
-			log.println("  --> "  + msg);
-			st.post(msg);
+			out.println("  --> "  + msg);
+			serverThread.post(msg);
 			// simulate lag
 			String[] tk = msg.split(" ");
-			Ordnance o = Ordnance.read(0, tk, 4);
+			Bullet o = Bullet.read(0, tk, 4);
 			o.setModel(this);
 			o.update(getTime(), 0);
 			transObjects.add(o);
-			log.println("  object is " + o);
+			out.println("  object is " + o);
 			
 			// Client2 [servertime] [localtime] addTrans Ordnance type endt dx dy x y
 			// need to include intended server time 
@@ -235,7 +195,7 @@ public class Model {
 		}
 	}
 	
-	public IntersectionFunction getIntersect() {
+	public Intersect getIntersect() {
 		return i;
 	}
 	
@@ -254,6 +214,6 @@ public class Model {
 	
 	
 	public void setServerThread(ServerThread st) {
-		this.st = st;
+		this.serverThread = st;
 	}
 }

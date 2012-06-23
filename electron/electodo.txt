@@ -1,0 +1,17 @@
+
+basic multiplayer
+ship-bullet collisions
+sound
+large maps
+map editing
+
+network
+
+there will be a client and server.
+the server will send bg and fg updates to the client for its area.ce
+the server also sends the time to the client frequently.
+an fg object is defined by position, time and parameters.
+therefore when received by the client the fg object will be somewhat advanced along its path.
+there are two types of trans fg object. local and server.
+server trans fg objects are sent to the sever and only rendered when received back. this way you get the same information as everyone else.
+local trans objects are for effects only.

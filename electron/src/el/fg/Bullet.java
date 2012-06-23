@@ -5,11 +5,8 @@ import el.phys.Circle;
 
 /**
  * Bomb or bullet
- * TODO tracers, lasers, thors
- * TODO burst
- * TODO shrap
  */
-public class Ordnance extends MovingFgObject {
+public class Bullet extends MovingFgObject {
 	
 	static final float lifet = 3f;
 	
@@ -22,14 +19,14 @@ public class Ordnance extends MovingFgObject {
     			c.x, c.y, vx, vy);
     }
     
-    public static Ordnance read(float toff, String[] s, int p) {
+    public static Bullet read(float toff, String[] s, int p) {
     	Gun.Type type = Gun.types.get(s[p++]);
     	float t = Float.parseFloat(s[p++]);
     	float x = Float.parseFloat(s[p++]);
     	float y = Float.parseFloat(s[p++]);
     	float dx = Float.parseFloat(s[p++]);
     	float dy = Float.parseFloat(s[p++]);
-    	return new Ordnance(type, t + toff, x, y, dx, dy);
+    	return new Bullet(type, t + toff, x, y, dx, dy);
     }
 	
 	/**
@@ -38,7 +35,7 @@ public class Ordnance extends MovingFgObject {
 	private final float endt;
 	private final Gun.Type type;
 	
-	public Ordnance(Gun.Type type, float t, float x, float y, float dx, float dy) {
+	public Bullet(Gun.Type type, float t, float x, float y, float dx, float dy) {
 		super(new Circle(x, y, type.radius));
 		this.type = type;
 		this.vx = dx;

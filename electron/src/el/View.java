@@ -2,7 +2,6 @@ package el;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.JComponent;
-import javax.swing.event.MouseInputAdapter;
 
 import el.bg.BgObject;
 import el.fg.FgObject;
@@ -115,100 +114,6 @@ class View extends JComponent {
 		}
 		oldf = f;
 		return String.format("View[%d,%d] [d=%d gc=%.2f]", 
-				getWidth(), getHeight(), Main.delay(), td);
-	}
-}
-
-class ViewKeyListener implements KeyListener {
-	private final Model m;
-	public ViewKeyListener(Model m) {
-		this.m = m;
-	}
-	public void keyTyped(java.awt.event.KeyEvent e) {
-		switch (e.getKeyChar()) {
-			case '¤':
-			case '`':
-				m.focusCycle();
-				break;
-			case '[':
-				Main.slower();
-				break;
-			case ']':
-				Main.faster();
-				break;
-			default:
-				//System.out.printf("typed '%c' -> %d\n", e.getKeyChar(), e.getKeyCode());
-		}
-	}
-	public void keyPressed(KeyEvent e) {
-		int c = e.getKeyCode();
-		switch (c) {
-			case KeyEvent.VK_UP:
-				// needs to set isUp
-				// or have some queue of actions in the model
-				m.action("up");
-				break;
-			case KeyEvent.VK_DOWN:
-				m.action("down");
-				break;
-			case KeyEvent.VK_LEFT:
-				m.action("left");
-				break;
-			case KeyEvent.VK_RIGHT:
-				m.action("right");
-				break;
-			case KeyEvent.VK_CONTROL:
-				m.action("fire1");
-				break;
-			case KeyEvent.VK_TAB:
-				m.action("fire2");
-				break;
-			case KeyEvent.VK_6:
-				m.action("fire3");
-				break;
-			default:
-				//System.out.printf("pressed '%c' -> %d\n", e.getKeyChar(), e.getKeyCode());
-		}
-	}
-	public void keyReleased(KeyEvent e) {
-		switch (e.getKeyCode()) {
-			case KeyEvent.VK_UP:
-				// needs to set isUp
-				// or have some queue of actions in the model
-				m.unaction("up");
-				break;
-			case KeyEvent.VK_DOWN:
-				m.unaction("down");
-				break;
-			case KeyEvent.VK_LEFT:
-				m.unaction("left");
-				break;
-			case KeyEvent.VK_RIGHT:
-				m.unaction("right");
-				break;
-			case KeyEvent.VK_CONTROL:
-				m.unaction("fire1");
-				break;
-			case KeyEvent.VK_TAB:
-				m.unaction("fire2");
-				break;
-			case KeyEvent.VK_ESCAPE:
-				System.exit(0);
-				break;
-			case KeyEvent.VK_6:
-				m.unaction("fire3");
-				break;
-			default:
-				//System.out.printf("released '%c' -> %d\n", e.getKeyChar(), e.getKeyCode());
-		}
-	}
-}
-
-class ViewMouseListener extends MouseInputAdapter {
-	public void mouseClicked(MouseEvent e) {
-		//
-	}
-	public void mouseDragged(MouseEvent e) {
-		//
+				getWidth(), getHeight(), ClientMain.delay(), td);
 	}
 }

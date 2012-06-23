@@ -1,5 +1,5 @@
 package el.fg;
-import static el.FMath.*;
+import static el.phys.FloatMath.*;
 import el.phys.Circle;
 import el.phys.Intersection;
 

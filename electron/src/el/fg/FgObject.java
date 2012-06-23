@@ -4,7 +4,7 @@ import java.awt.geom.AffineTransform;
 
 import el.phys.Circle;
 import el.Model;
-import el.phys.IntersectionFunction;
+import el.phys.Intersect;
 import el.phys.Intersection;
 
 

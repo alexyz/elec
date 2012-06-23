@@ -2,7 +2,7 @@ package el.bg;
 import java.awt.Graphics2D;
 
 import el.phys.Circle;
-import el.phys.IntersectionFunction;
+import el.phys.Intersect;
 import el.phys.Intersection;
 
 
@@ -23,7 +23,7 @@ public abstract class BgObject {
 	
 	public abstract void update (float t, float dt);
 	
-	public Intersection intersects(IntersectionFunction i, Circle c, float tx, float ty) {
+	public Intersection intersects(Intersect i, Circle c, float tx, float ty) {
 		return null;
 	}
 

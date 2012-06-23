@@ -1,10 +1,10 @@
-package el;
+package el.phys;
 
 /**
  * Float precision math methods
  */
-public class FMath {
-	private FMath() {
+public class FloatMath {
+	private FloatMath() {
 		//
 	}
 	

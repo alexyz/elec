@@ -5,7 +5,7 @@ import el.phys.Circle;
 
 
 /**
- * Meta-object that represents the current viewport into the model
+ * Meta-object that represents the current view port into the model
  */
 public class ModelObject extends FgObject {
 	public ModelObject() {
