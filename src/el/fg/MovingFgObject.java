@@ -49,6 +49,9 @@ abstract class MovingFgObject extends FgObject  {
      */
     protected int hit;
     
+    /**
+	 * Create object with given location and radius
+	 */
 	public MovingFgObject(Circle c) {
 		super(c);
 	}

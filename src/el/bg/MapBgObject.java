@@ -1,4 +1,5 @@
 package el.bg;
+
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -9,8 +10,8 @@ import el.phys.Circle;
 import el.phys.Intersect;
 import el.phys.Intersection;
 
-/*
- need a method to get all map objects along a line for collisions and in a square for the view, preferably somewhat lazy and reusable
+/**
+ * the map tiles
  */
 public class MapBgObject extends BgObject {
 	
@@ -22,14 +23,19 @@ public class MapBgObject extends BgObject {
 	
 	public MapBgObject() {
 		tiles.add(new Tile(500000, 499920));
-		tiles.add(new Tile(500080, 499920));
+		tiles.add(new Tile(500100, 499920));
+		Random r = new Random();
+		for (int n = 0; n < 10; n++) {
+			tiles.add(new Tile(499500+r.nextInt(1000),499500+r.nextInt(1000)));
+		}
 	}
 	
 	@Override
 	public void paint(Graphics2D g, float mx1, float my1, int w, int h) {
 		final float mx2 = mx1 + w, my2 = my1 + h;
-		//g.setColor(Color.white);
-		//g.drawString(String.format("map x %.1f to %.1f, y %.1f to %.1f", mx1, mx2, my1, my2), 10, 70);
+		// g.setColor(Color.white);
+		// g.drawString(String.format("map x %.1f to %.1f, y %.1f to %.1f", mx1,
+		// mx2, my1, my2), 10, 70);
 		for (Tile t : tiles) {
 			if (t.isin(mx1, my1, mx2, my2)) {
 				int sx = (int) (t.x0 - mx1);
@@ -49,7 +55,8 @@ public class MapBgObject extends BgObject {
 	@Override
 	public Intersection intersects(Intersect i, Circle c, float tx, float ty) {
 		// need to know if line intersects with any tile
-		//println("checking map intersect with %f,%f -> %f,%f", lx1, ly1, lx2, ly2);
+		// println("checking map intersect with %f,%f -> %f,%f", lx1, ly1, lx2,
+		// ly2);
 		Intersection r;
 		for (Tile t : tiles)
 			if ((r = t.intersects(i, c, tx, ty)) != null)
@@ -57,7 +64,7 @@ public class MapBgObject extends BgObject {
 		return null;
 	}
 	
-	void place(int mx, int my, boolean rem) {
+	private void place(int mx, int my, boolean rem) {
 		Iterator<Tile> i = tiles.iterator();
 		while (i.hasNext()) {
 			Tile t = i.next();
@@ -67,10 +74,9 @@ public class MapBgObject extends BgObject {
 				return;
 			}
 		}
-
+		
 		int m = ~0xf;
 		tiles.add(new Tile(mx & m, my & m));
 	}
-	
 	
 }

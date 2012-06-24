@@ -1,7 +1,8 @@
 package el;
+
 import java.awt.*;
 import java.awt.event.*;
-import javax.swing.JComponent;
+import java.awt.image.BufferStrategy;
 
 import el.bg.BgObject;
 import el.fg.FgObject;
@@ -9,30 +10,57 @@ import el.fg.Ship;
 
 import java.util.List;
 
-class JCView extends JComponent {
+/**
+ * Exactly the same as JCView except uses canvas instead of JComponent
+ */
+class CanvasView extends Canvas {
 	private final Model model;
+	
 	private long freeMem, gcTime;
 	private float gcTimeDelta;
 	
-	public JCView(final Model model) {
+	public CanvasView(final Model model) {
 		this.model = model;
-		// enable tab
+		// enable capture of tab key
 		setFocusTraversalKeysEnabled(false);
 		setMinimumSize(new Dimension(640, 480));
 		setPreferredSize(getMinimumSize());
 		addKeyListener(new ViewKeyListener(model));
-		//addMouseListener(ml);
-		//addMouseMotionListener(ml);
-		//addMouseWheelListener(ml);
+		addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				System.out.println("view mouse clicked: " + e.getPoint());
+				// TODO edit map...
+			}
+		});
 		setFocusable(true);
 		setFont(new Font(Font.DIALOG, Font.BOLD, 12));
-		setDoubleBuffered(true);
 		setIgnoreRepaint(true);
-		setOpaque(true);
-		//System.out.println("view double buffered: " + isDoubleBuffered());
-		//System.out.println("view opaque: " + isOpaque());
-		//System.out.println("view optimised: " + isOptimizedDrawingEnabled());
-		//System.out.println("view lightweight: " + isLightweight());
+	}
+	
+	@Override
+	public boolean isDoubleBuffered() {
+		return true;
+	}
+	
+	@Override
+	public boolean isOpaque() {
+		// return true as this component entirely paints itself
+		return true;
+	}
+	
+	public void paintImmediately(int x, int y, int w, int h) {
+		BufferStrategy bs = getBufferStrategy();
+		if (bs == null) {
+			// creates a blit strategy on os x, should be flip...
+			createBufferStrategy(2);
+			bs = getBufferStrategy();
+		}
+		Graphics2D g = (Graphics2D) bs.getDrawGraphics();
+		g.setClip(x, y, w, h);
+		paint(g);
+		g.dispose();
+		bs.show();
 	}
 	
 	/**
@@ -98,15 +126,15 @@ class JCView extends JComponent {
 	}
 	
 	private void paintStatus(Graphics2D g) {
-		//long f = Runtime.getRuntime().freeMemory() / 1000;
-		//long tl = Runtime.getRuntime().totalMemory() / 1000;
+		// long f = Runtime.getRuntime().freeMemory() / 1000;
+		// long tl = Runtime.getRuntime().totalMemory() / 1000;
 		int lh = g.getFontMetrics().getHeight();
 		g.setColor(Color.white);
 		g.drawString(toString(), 5, lh + 5);
 		g.drawString(model.toString(), 5, lh * 2 + 5);
 		g.drawString(String.valueOf(model.getFocus()), 5, lh * 3 + 5);
 	}
-
+	
 	@Override
 	public String toString() {
 		long f = Runtime.getRuntime().freeMemory();
@@ -116,7 +144,6 @@ class JCView extends JComponent {
 			gcTime = t;
 		}
 		freeMem = f;
-		return String.format("View[%d,%d] [d=%d gc=%.2f]", 
-				getWidth(), getHeight(), ClientMain.delay(), gcTimeDelta);
+		return String.format("View[%d,%d] [d=%d gc=%.2f]", getWidth(), getHeight(), ClientMain.delay(), gcTimeDelta);
 	}
 }

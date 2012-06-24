@@ -26,6 +26,9 @@ public abstract class FgObject {
 	 */
 	protected Circle c;
 	
+	/**
+	 * Create object with given location and radius
+	 */
 	public FgObject(Circle c) {
 		this.c = c;
 	}

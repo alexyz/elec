@@ -2,23 +2,16 @@ package el.fg;
 
 import static el.phys.FloatMath.*;
 
-import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.Polygon;
-import java.util.*;
-
+import java.awt.Image;
+import el.ClientMain;
 import el.phys.Circle;
-
 
 /**
  * Simple subclass of moving object, can draw a ship and spawn bullets
  */
 public class Ship extends MovingFgObject {
-	// shape
-	static final int s = 32;
-	static final int[] xp = { 0, s / 2, 0, - s / 2 };
-	static final int[] yp = { - s / 2, s / 2, s / 4, s / 2 };
-	static final Polygon p = new Polygon(xp, yp, xp.length);
+	private final Image i;
 	
 	/**
 	 * Last time guns were fired
@@ -33,7 +26,8 @@ public class Ship extends MovingFgObject {
 	private float energy = 2000f;
     
     public Ship(int mx, int my) {
-    	super(new Circle(mx, my, s / 2));
+    	super(new Circle(mx, my, 24));
+    	i = ClientMain.getImage("/img/ship1.png");
     	init();
     }
     
@@ -47,31 +41,36 @@ public class Ship extends MovingFgObject {
     	guns[2] = new Gun(Gun.Type.bomb4, 1f, 200f, new Mount(0, -8, 0));
     }
     
-    protected void paintAuto(Graphics2D g) {
+    @Override
+	protected void paintAuto(Graphics2D g) {
         g.rotate(f);
-        g.setColor(Color.blue);
-        g.fill(p);
+        g.drawImage(i,(int)-c.r,(int)-c.r,null);
     }
     
-    public void left() {
+    @Override
+	public void left() {
     	//fd -= 0.1;
     	f -= pi / 30f;
     }
     
-    public void right() {
+    @Override
+	public void right() {
     	//fd += 0.1;
     	f += pi / 30f;
     }
     
-    public void up() {
+    @Override
+	public void up() {
     	accel(2f);
     }
     
-    public void down() {
+    @Override
+	public void down() {
     	accel(-2f);
     }
     
-    public void fire(int n) {
+    @Override
+	public void fire(int n) {
     	Gun gun = guns[n];
     	if (gun != null) {
     		float t = model.getTime();
@@ -93,7 +92,8 @@ public class Ship extends MovingFgObject {
     	}
     }
     
-    public String toString() {
+    @Override
+	public String toString() {
     	return String.format("Ship[%.0f]", energy) + super.toString();
     }
     
