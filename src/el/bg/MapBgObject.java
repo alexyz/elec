@@ -64,17 +64,21 @@ public class MapBgObject extends BgObject {
 		return null;
 	}
 	
-	private void place(int mx, int my, boolean rem) {
+	public void place(int mx, int my, boolean rem) {
+		System.out.println(String.format("place/remove map tile at %d,%d", mx, my));
 		Iterator<Tile> i = tiles.iterator();
 		while (i.hasNext()) {
 			Tile t = i.next();
 			if (t.isat(mx, my)) {
-				if (rem)
+				System.out.println("found tile");
+				if (rem) {
+					System.out.println("removing tile");
 					i.remove();
+				}
 				return;
 			}
 		}
-		
+		System.out.println("placing tile");
 		int m = ~0xf;
 		tiles.add(new Tile(mx & m, my & m));
 	}

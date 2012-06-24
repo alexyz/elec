@@ -78,7 +78,7 @@ public class ClientMain {
 			}
 		});
 		
-		timer = new Timer(50, new ActionListener() {
+		timer = new Timer(25, new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				m.update();

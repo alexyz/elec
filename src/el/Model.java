@@ -36,19 +36,19 @@ public class Model {
 	private final LinkedList<FgObject> transObjects = new LinkedList<FgObject>();
 	private final ActionMap actionMap = new ActionMap();
 	private final ArrayList<FgRunnable> actions = new ArrayList<FgRunnable>();
-	private final FgObject modelObj = new ModelObject();
+	private final ModelObject modelObj = new ModelObject();
 	private final long startTime = System.nanoTime();
 	/**
 	 * The map (transients may collide with it)
 	 */
-	private final BgObject map = new MapBgObject();
+	private final MapBgObject map = new MapBgObject();
 	/**
 	 * The background (non interacting)
 	 */
-	private final BgObject stars = new StarBgObject();
+	private final StarBgObject stars = new StarBgObject();
 	private final List<BgObject> bgObjects = Arrays.asList(stars, map);
 	/**
-	 * Collision detection
+	 * Collision detection function
 	 */
 	private final Intersect i = new CSIntersect();
 	
@@ -137,6 +137,9 @@ public class Model {
 		return transObjects;
 	}
 	
+	/**
+	 * Apply action to focused object (until unactioned)
+	 */
 	void action(String name) {
 		FgRunnable action = actionMap.get(name);
 		if (action == null)
@@ -145,6 +148,9 @@ public class Model {
 			actions.add(action);
 	}
 	
+	/**
+	 * Stop applying action to focused object
+	 */
 	void unaction(String name) {
 		FgRunnable action = actionMap.get(name);
 		if (action == null)
@@ -168,7 +174,7 @@ public class Model {
 	}
 	
 	public void addTransObject(FgObject obj) {
-		out.println("addTransObject " + obj);
+		//out.println("addTransObject " + obj);
 		
 		if (serverThread == null) {
 			obj.setModel(this);
@@ -212,8 +218,11 @@ public class Model {
 		return null;
 	}
 	
-	
 	public void setServerThread(ServerThread st) {
 		this.serverThread = st;
+	}
+	
+	public MapBgObject getMap() {
+		return map;
 	}
 }

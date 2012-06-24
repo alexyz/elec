@@ -18,6 +18,7 @@ class CanvasView extends Canvas {
 	
 	private long freeMem, gcTime;
 	private float gcTimeDelta;
+	private Point mousePoint = new Point();
 	
 	public CanvasView(final Model model) {
 		this.model = model;
@@ -26,13 +27,22 @@ class CanvasView extends Canvas {
 		setMinimumSize(new Dimension(640, 480));
 		setPreferredSize(getMinimumSize());
 		addKeyListener(new ViewKeyListener(model));
-		addMouseListener(new MouseAdapter() {
+		MouseAdapter l = new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
-				System.out.println("view mouse clicked: " + e.getPoint());
-				// TODO edit map...
+				Point p = e.getPoint();
+				int x = getModelX() + p.x;
+				int y = getModelY() + p.y;
+				System.out.println("view mouse clicked: " + x + ", " + y);
+				model.getMap().place(x, y, e.getButton() == MouseEvent.BUTTON3);
 			}
-		});
+			@Override
+			public void mouseMoved(MouseEvent e) {
+				mousePoint = e.getPoint();
+			}
+		};
+		addMouseListener(l);
+		addMouseMotionListener(l);
 		setFocusable(true);
 		setFont(new Font(Font.DIALOG, Font.BOLD, 12));
 		setIgnoreRepaint(true);
@@ -64,20 +74,23 @@ class CanvasView extends Canvas {
 	}
 	
 	/**
-	 * Get the model x origin, i.e. the leftmost visible model x co-ordinate.
+	 * Get the model x co-ordinate of 0,0 in the view
 	 */
-	private int getMxo() {
+	private int getModelX() {
 		return model.getX() - getWidth() / 2;
 	}
 	
-	private int getMyo() {
+	/**
+	 * Get the model y co-ordinate of 0,0 in the view
+	 */
+	private int getModelY() {
 		return model.getY() - getHeight() / 2;
 	}
 	
 	@Override
 	public void paint(Graphics g_) {
 		Graphics2D g = (Graphics2D) g_;
-		int mxo = getMxo(), myo = getMyo();
+		int mxo = getModelX(), myo = getModelY();
 		
 		// draw bg
 		for (BgObject bg : model.getBgObjects())
@@ -96,7 +109,7 @@ class CanvasView extends Canvas {
 	 * Paint given objects
 	 */
 	private void paintfg(Graphics2D g, List<FgObject> objects) {
-		int mxo = getMxo(), myo = getMyo();
+		int mxo = getModelX(), myo = getModelY();
 		// view width, height
 		int w = getWidth(), h = getHeight();
 		
@@ -133,6 +146,9 @@ class CanvasView extends Canvas {
 		g.drawString(toString(), 5, lh + 5);
 		g.drawString(model.toString(), 5, lh * 2 + 5);
 		g.drawString(String.valueOf(model.getFocus()), 5, lh * 3 + 5);
+		int mx = getModelX() + mousePoint.x;
+		int my = getModelY() + mousePoint.y;
+		g.drawString("Mouse " + mx + ", " + my, 5, lh * 4 + 5);
 	}
 	
 	@Override
