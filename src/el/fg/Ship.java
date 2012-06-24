@@ -59,9 +59,24 @@ public class Ship extends MovingFgObject {
     	f += pi / 30f;
     }
     
+    float thrusttime;
+    
     @Override
-	public void up() {
+    public void up() {
     	accel(2f);
+    	float t = model.getTime();
+    	// rate limit
+    	if (t - thrusttime > 0.0625) {
+    		thrusttime = t;
+    		
+    		float bdx = sin(f + pi) * 75f + vx;
+    		float bdy = -cos(f + pi) * 75f + vy;
+    		
+    		// rotate the gun mount offsets
+    		//float x = c.x + cos(f) * mount.x - sin(f) * mount.y;
+    		//float y = c.y + sin(f) * mount.x + cos(f) * mount.y;
+    		model.addTransObject(new Exhaust(c.x, c.y, bdx, bdy, t));
+    	}
     }
     
     @Override

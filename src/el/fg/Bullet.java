@@ -6,10 +6,11 @@ import el.phys.Circle;
 /**
  * Bomb or bullet
  */
-public class Bullet extends MovingFgObject {
+public class Bullet extends TransMovingFgObject {
 	
 	static final float lifet = 3f;
 	
+	/*
     public String write() {
     	// Client2 [servertime] [localtime] addTrans Ordnance type t dx dy x y
     	return String.format("%s %s %f %f %f %f %f",
@@ -28,30 +29,16 @@ public class Bullet extends MovingFgObject {
     	float dy = Float.parseFloat(s[p++]);
     	return new Bullet(type, t + toff, x, y, dx, dy);
     }
+	*/
 	
-	/**
-	 * Start and end time
-	 */
-	private final float endt;
 	private final Gun.Type type;
 	
 	public Bullet(Gun.Type type, float t, float x, float y, float dx, float dy) {
-		super(new Circle(x, y, type.radius));
+		super(new Circle(x, y, type.radius), t, t + lifet);
 		this.type = type;
 		this.vx = dx;
 		this.vy = dy;
-		this.endt = t + lifet;
     }
-	
-    @Override
-	public void update(float t, float td) {
-		if (t > endt) {
-			remove = true;
-			
-		} else {
-			super.update(t, td);
-		}
-	}
 	
 	@Override
 	public void paint(Graphics2D g) {
@@ -64,7 +51,7 @@ public class Bullet extends MovingFgObject {
 	
 	@Override
 	public String toString() {
-		return String.format("Ord[%s]", type) + super.toString();
+		return String.format("Bullet[%s]", type) + super.toString();
 	}
 	
 	

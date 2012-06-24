@@ -1,6 +1,5 @@
 package el;
 import java.awt.*;
-import java.awt.event.*;
 import javax.swing.JComponent;
 
 import el.bg.BgObject;
@@ -67,7 +66,7 @@ class JCView extends JComponent {
 	/**
 	 * Paint given objects
 	 */
-	private void paintfg(Graphics2D g, List<FgObject> objects) {
+	private void paintfg(Graphics2D g, List<? extends FgObject> objects) {
 		int mxo = getMxo(), myo = getMyo();
 		// view width, height
 		int w = getWidth(), h = getHeight();

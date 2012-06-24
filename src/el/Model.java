@@ -33,7 +33,7 @@ public class Model {
 	/**
 	 * transient foreground objects (bullets)
 	 */
-	private final LinkedList<FgObject> transObjects = new LinkedList<FgObject>();
+	private final ArrayList<TransMovingFgObject> transObjects = new ArrayList<TransMovingFgObject>();
 	private final ActionMap actionMap = new ActionMap();
 	private final ArrayList<FgRunnable> actions = new ArrayList<FgRunnable>();
 	private final ModelObject modelObj = new ModelObject();
@@ -100,9 +100,9 @@ public class Model {
 		}
 		
 		if (transObjects.size() > 0) {
-			Iterator<FgObject> i = transObjects.iterator();
+			Iterator<TransMovingFgObject> i = transObjects.iterator();
 			while (i.hasNext()) {
-				FgObject o = i.next();
+				TransMovingFgObject o = i.next();
 				// may inflict damage to objects
 				o.update(time, timeDelta);
 				if (o.remove()) {
@@ -133,7 +133,7 @@ public class Model {
 		return objects;
 	}
 	
-	List<FgObject> getTransFgObjects() {
+	List<TransMovingFgObject> getTransFgObjects() {
 		return transObjects;
 	}
 	
@@ -173,7 +173,7 @@ public class Model {
 		objects.add(obj);
 	}
 	
-	public void addTransObject(FgObject obj) {
+	public void addTransObject(TransMovingFgObject obj) {
 		//out.println("addTransObject " + obj);
 		
 		if (serverThread == null) {
@@ -182,6 +182,7 @@ public class Model {
 			
 		} else {
 			// TODO inform server
+			/*
 			long t = serverThread.getServerTime();
 			String msg = String.format("%d %f addTrans %s", t, getTime(), obj.write());
 			out.println("  --> "  + msg);
@@ -193,7 +194,7 @@ public class Model {
 			o.update(getTime(), 0);
 			transObjects.add(o);
 			out.println("  object is " + o);
-			
+			*/
 			// Client2 [servertime] [localtime] addTrans Ordnance type endt dx dy x y
 			// need to include intended server time 
 			// need to translate time

@@ -1,12 +1,11 @@
 package el.fg;
+
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 
 import el.phys.Circle;
 import el.Model;
-import el.phys.Intersect;
 import el.phys.Intersection;
-
 
 /**
  * Object with a position, can paint and update and receive input if it has the focus
@@ -18,13 +17,9 @@ public abstract class FgObject {
 	 */
 	protected Model model;
 	/**
-	 * Set to true for the object to be removed
-	 */
-	protected boolean remove;
-	/**
 	 * Location of object
 	 */
-	protected Circle c;
+	protected final Circle c;
 	
 	/**
 	 * Create object with given location and radius
@@ -86,13 +81,6 @@ public abstract class FgObject {
     	//
     }
     
-    /**
-     * Returns true if object should be removed
-     */
-    public final boolean remove() {
-    	return remove;
-    }
-    
     public Intersection intersects(Circle c, float tx, float ty) {
     	return null;
     }
@@ -105,6 +93,7 @@ public abstract class FgObject {
     
     /**
      * Hit by this transient object
+     * FIXME unused
      */
     public void hit(FgObject o) {
     	System.out.println("hit by " + o);

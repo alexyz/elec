@@ -18,7 +18,7 @@ class CanvasView extends Canvas {
 	
 	private long freeMem, gcTime;
 	private float gcTimeDelta;
-	private Point mousePoint = new Point();
+	private Point mousePoint;
 	
 	public CanvasView(final Model model) {
 		this.model = model;
@@ -108,7 +108,7 @@ class CanvasView extends Canvas {
 	/**
 	 * Paint given objects
 	 */
-	private void paintfg(Graphics2D g, List<FgObject> objects) {
+	private void paintfg(Graphics2D g, List<? extends FgObject> objects) {
 		int mxo = getModelX(), myo = getModelY();
 		// view width, height
 		int w = getWidth(), h = getHeight();
@@ -146,9 +146,11 @@ class CanvasView extends Canvas {
 		g.drawString(toString(), 5, lh + 5);
 		g.drawString(model.toString(), 5, lh * 2 + 5);
 		g.drawString(String.valueOf(model.getFocus()), 5, lh * 3 + 5);
-		int mx = getModelX() + mousePoint.x;
-		int my = getModelY() + mousePoint.y;
-		g.drawString("Mouse " + mx + ", " + my, 5, lh * 4 + 5);
+		if (mousePoint != null) {
+			int mx = getModelX() + mousePoint.x;
+			int my = getModelY() + mousePoint.y;
+			g.drawString("Mouse " + mx + ", " + my, 5, lh * 4 + 5);
+		}
 	}
 	
 	@Override
