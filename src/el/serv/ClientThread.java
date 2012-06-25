@@ -7,49 +7,77 @@ import java.io.PrintStream;
 import java.net.Socket;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Server connection thread to client.
+ * Each client has at most one foreground object identified by id.
+ */
 class ClientThread extends Thread {
-	private static PrintStream log = System.out;
-	private static AtomicInteger sequence = new AtomicInteger();
 	
-	private final Socket socket;
+	/** update time on client (long) */
+	public static final String TIME = "time";
+	/** tell client with id to enter (int) */
+	public static final String ENTER = "enter";
+	/** tell client to spectate (int) */
+	public static final String SPEC = "spectate";
+	/** tell client its identifier (int) */
+	public static final String ID = "id";
+	/** tell client to update the given object (int) (FGObject) */
+	public static final String UPDATEOBJ = "update-obj";
+	
+	private static final PrintStream out = System.out;
+	private static final AtomicInteger idSequence = new AtomicInteger();
+	
+	/** client identifier */
+	public final int id;
+	/** input reader for receiving data from the client */
 	private final BufferedReader clientIn;
+	/** output stream for sending data to client */
 	private final PrintStream clientOut;
-	private final Server server;
 	
-	public ClientThread(Server sv, Socket s) throws Exception {
-		super("ClientThread" + sequence.getAndIncrement());
+	public ClientThread(Socket socket) throws Exception {
 		setDaemon(true);
 		setPriority(Thread.NORM_PRIORITY);
-		this.server = sv;
-		this.socket = s;
-		clientIn = new BufferedReader(new InputStreamReader(s.getInputStream()));
-		clientOut = new PrintStream(s.getOutputStream());
+		this.id = idSequence.getAndIncrement();
+		setName("ClientThread-" + id);
+		clientIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		clientOut = new PrintStream(socket.getOutputStream());
 	}
 	
 	@Override
 	public void run() {
 		try {
+			send(ID + " " + id);
+			
 			String line;
 			while ((line = clientIn.readLine()) != null) {
-				log.println("client " + this + " read " + line);
-				ServerMain.lag();
-				server.post(getName(), line);
+				out.println(this + ": received " + line);
+				String[] tk = line.split("\\s+");
+				String cmd = tk[0];
+				
+				// commands from client to server
+				
+				if (cmd.equals(ServerThread.ENTERREQ)) {
+					ServerMain.enterReq(this);
+					
+				} else if (cmd.equals(ServerThread.SPEC)) {
+					ServerMain.spec(this);
+					
+				} else if (cmd.equals(ServerThread.UPDATE)) {
+					ServerMain.update(this, line.substring(line.indexOf(" ") + 1));
+					
+				} else {
+					out.println(this + ": unknown command " + line);
+				}
 			}
+			
 		} catch (IOException e) {
-			e.printStackTrace();
+			out.println(this + ": " + e);
 		}
-		server.leave(this);
 	}
 	
-	public void post(String line) {
-		log.println("client " + this + " posting " + line);
-		ServerMain.lag();
+	public void send(String line) {
+		out.println(this + ": send " + line);
 		clientOut.println(line);
-	}
-	
-	@Override
-	public String toString() {
-		return getName();
 	}
 	
 }

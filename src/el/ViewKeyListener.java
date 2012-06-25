@@ -13,6 +13,7 @@ class ViewKeyListener implements KeyListener {
 	
 	@Override
 	public void keyTyped(java.awt.event.KeyEvent e) {
+		System.out.println("typed '" + e.getKeyChar() + "'");
 		switch (e.getKeyChar()) {
 			case '¤':
 			case '`':

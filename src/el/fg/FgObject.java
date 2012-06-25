@@ -11,15 +11,20 @@ import el.phys.Intersection;
  * Object with a position, can paint and update and receive input if it has the focus
  */
 public abstract class FgObject {
+	
+	/**
+	 * Location of object
+	 */
+	protected final Circle c;
 	/**
 	 * Model of this object.
 	 * Never null after object is added to model
 	 */
 	protected Model model;
 	/**
-	 * Location of object
+	 * Object identifier
 	 */
-	protected final Circle c;
+	protected int id;
 	
 	/**
 	 * Create object with given location and radius
@@ -27,6 +32,25 @@ public abstract class FgObject {
 	public FgObject(Circle c) {
 		this.c = c;
 	}
+	
+	/** update object from array, return pointer to next element */
+	public int read(String[] args, int i) {
+    	c.x = Integer.parseInt(args[i++]);
+    	c.y = Integer.parseInt(args[i++]);
+    	c.r = Integer.parseInt(args[i++]);
+    	return i;
+    }
+    
+	/** write object to string */
+    public void write(StringBuilder sb) {
+    	sb.append(c.x).append(" ");
+    	sb.append(c.y).append(" ");
+    	sb.append(c.r).append(" ");
+    }
+    
+    public final int getId() {
+    	return id;
+    }
 	
 	/**
 	 * Current X position as closest integer
@@ -52,10 +76,11 @@ public abstract class FgObject {
 	}
 	
 	/**
-	 * Set the model
+	 * Set the model and identifier of the object
 	 */
-	public final void setModel(Model model) {
+	public final void setModel(Model model, int id) {
 		this.model = model;
+		this.id = id;
 	}
 	
 	/**

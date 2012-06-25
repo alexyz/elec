@@ -55,6 +55,25 @@ abstract class MovingFgObject extends FgObject  {
 	public MovingFgObject(Circle c) {
 		super(c);
 	}
+	
+	@Override
+	public int read(String[] args, int i) {
+    	i = super.read(args, i);
+    	vx = Float.parseFloat(args[i++]);
+    	vy = Float.parseFloat(args[i++]);
+    	fd = Float.parseFloat(args[i++]);
+    	f = Float.parseFloat(args[i++]);
+    	return i;
+    }
+    
+    @Override
+	public void write(StringBuilder sb) {
+    	super.write(sb);
+    	sb.append(vx).append(" ");
+    	sb.append(vy).append(" ");
+    	sb.append(fd).append(" ");
+    	sb.append(f).append(" ");
+    }
     
     /**
      * Accelerate in facing direction in pixels/sec

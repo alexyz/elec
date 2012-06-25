@@ -116,6 +116,6 @@ class JCView extends JComponent {
 		}
 		freeMem = f;
 		return String.format("View[%d,%d] [d=%d gc=%.2f]", 
-				getWidth(), getHeight(), ClientMain.delay(), gcTimeDelta);
+				getWidth(), getHeight(), ClientMain.getDelay(), gcTimeDelta);
 	}
 }

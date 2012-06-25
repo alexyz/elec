@@ -18,7 +18,7 @@ public class Tile extends Rect {
 	
 	public Tile(int x, int y) {
 		super(x, y, x + 32, y + 32);
-		i = ClientMain.getImage("/img/tile1.png");
+		i = ClientMain.getImage(ClientMain.TILE1_IMAGE);
 	}
 	
 	public boolean isat(int x, int y) {

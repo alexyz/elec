@@ -14,15 +14,6 @@ class Gun {
 		new Color(1f, 0f, 1f)
 	};
 	
-	static final Map<String,Type> types = new TreeMap<String,Type>();
-	
-	static {
-		List<Type> l = Arrays.asList(Type.gun1, Type.gun2, Type.gun3, Type.gun4, Type.bomb1, Type.bomb2, Type.bomb3, Type.bomb4);
-		for (Type t : l) {
-			types.put(t.toString(), t);
-		}
-	}
-	
 	enum Type {
 		gun1(0, 2),
 		gun2(1, 2),
@@ -42,9 +33,9 @@ class Gun {
 	}
 	
 	final Mount[] mounts;
-	float period;
-	float velocity;
-	Type type;
+	final float period;
+	final float velocity;
+	final Type type;
 	Gun(Type type, float period, float velocity, Mount... mounts) {
 		this.period = period;
 		this.velocity = velocity;

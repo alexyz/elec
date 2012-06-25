@@ -5,6 +5,8 @@ import java.util.*;
 
 import el.phys.*;
 import el.phys.cs.CSIntersect;
+import el.serv.Server;
+import el.serv.ServerThread;
 import el.bg.*;
 import el.fg.*;
 
@@ -19,12 +21,9 @@ import el.fg.*;
  */
 public class Model {
 	
-	static final PrintStream out = System.out; 
 	public static final int centrex = 500000, centrey = 500000;
 	
-	//
-	// constants
-	//
+	private static final PrintStream out = System.out;
 	
 	/**
 	 * permanent foreground objects (ships)
@@ -52,20 +51,41 @@ public class Model {
 	 */
 	private final Intersect i = new CSIntersect();
 	
-	//
-	// variables
-	//
-	
+	/**
+	 * time of last update
+	 */
 	private float elapsedTime;
+	/**
+	 * currently focused object
+	 */
 	private FgObject focusObj = modelObj;
-	private long servertime = 0;
-	private ServerThread serverThread;
+	/**
+	 * the server, if any
+	 */
+	private Server server;
 	
-	// need two layers
 	public Model() {
-		// TODO request this from server
-		addFgObject(new Ship(centrex - 20, centrey));
-		addFgObject(new Ship(centrex + 20, centrey));
+		//
+	}
+	
+	/**
+	 * enter the user into the game
+	 */
+	public void enter(int id) {
+		Ship ship = new Ship(ShipType.types[0], centrex - 20, centrey);
+		focusObj = ship;
+		// TODO need to put focused object on top
+		addFgObject(ship, id);
+	}
+	
+	/**
+	 * remove the user from the game
+	 */
+	public void spec() {
+		if (focusObj != null) {
+			objects.remove(focusObj);
+			focusObj = modelObj;
+		}
 	}
 	
 	/**
@@ -83,6 +103,11 @@ public class Model {
 		System.out.println("focus: " + focusObj);
 	}
 	
+	float lastUpdate;
+	
+	/**
+	 * update the world
+	 */
 	void update() {
 		float time = (System.nanoTime() - this.startTime) / 1000000000.0f;
 		float timeDelta = time - this.elapsedTime;
@@ -92,6 +117,11 @@ public class Model {
 		if (actions.size() > 0) {
 			for (FgRunnable r : actions) {
 				r.run(focusObj);
+			}
+			if (server != null && (elapsedTime - lastUpdate) > 0.5 && focusObj instanceof Ship) {
+				// update server - only if there is currently an action
+				server.update((Ship) focusObj);
+				lastUpdate = elapsedTime;
 			}
 		}
 		
@@ -117,10 +147,16 @@ public class Model {
 		return elapsedTime;
 	}
 	
+	/**
+	 * Get model x location of currently focused object
+	 */
 	int getX() {
 		return focusObj.getX();
 	}
 	
+	/**
+	 * Get model y location of currently focused object
+	 */
 	int getY() {
 		return focusObj.getY();
 	}
@@ -168,38 +204,26 @@ public class Model {
 		return focusObj;
 	}
 	
-	public void addFgObject(FgObject obj) {
-		obj.setModel(this);
+	public void addFgObject(FgObject obj, int id) {
+		obj.setModel(this, id);
 		objects.add(obj);
 	}
 	
-	public void addTransObject(TransMovingFgObject obj) {
-		//out.println("addTransObject " + obj);
-		
-		if (serverThread == null) {
-			obj.setModel(this);
-			transObjects.add(obj); 
-			
-		} else {
-			// TODO inform server
-			/*
-			long t = serverThread.getServerTime();
-			String msg = String.format("%d %f addTrans %s", t, getTime(), obj.write());
-			out.println("  --> "  + msg);
-			serverThread.post(msg);
-			// simulate lag
-			String[] tk = msg.split(" ");
-			Bullet o = Bullet.read(0, tk, 4);
-			o.setModel(this);
-			o.update(getTime(), 0);
-			transObjects.add(o);
-			out.println("  object is " + o);
-			*/
-			// Client2 [servertime] [localtime] addTrans Ordnance type endt dx dy x y
-			// need to include intended server time 
-			// need to translate time
-			// wait for it to come back in
+	public void updateFgObject(int id, String[] data, int i) {
+		for (FgObject obj : objects) {
+			if (obj.getId() == id) {
+				obj.read(data, i);
+				return;
+			}
 		}
+		System.out.println("could not find object " + id);
+	}
+	
+	public void addTransObject(TransMovingFgObject obj) {
+		obj.setModel(this, -1);
+		transObjects.add(0, obj); 
+		
+		// TODO send to server
 	}
 	
 	public Intersect getIntersect() {
@@ -219,8 +243,8 @@ public class Model {
 		return null;
 	}
 	
-	public void setServerThread(ServerThread st) {
-		this.serverThread = st;
+	public void setServer(Server server) {
+		this.server = server;
 	}
 	
 	public MapBgObject getMap() {

@@ -1,58 +1,18 @@
 package el.serv;
 
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
+import el.fg.Ship;
 
-class Server {
-	private static final PrintStream out = System.out;
-	private final List<ClientThread> clients = new ArrayList<ClientThread>();
-	private final long startTime;
-
-	public Server() {
-		startTime = System.nanoTime();
-		Thread t = new Thread("Server time thread") {
-			@Override
-			public void run() {
-				while (true) {
-					try {
-						sleep(10000);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-					synchronized (this) {
-						for (ClientThread c : clients) {
-							c.post("Server time " + time());
-						}
-					}
-				}
-			}
-		};
-		t.setDaemon(true);
-		t.start();
-	}
-
-	public long time() {
-		return System.nanoTime() - this.startTime;
-	}
+/**
+ * Interface for sending commands from client to server
+ */
+public interface Server {
 	
-	public synchronized void post(String id, String cmd) {
-		for (ClientThread c : clients) {
-			c.post("Server time " + time());
-			c.post(id + " " + cmd);
-		}
-	}
+	public void enterReq();
 	
-	public synchronized void join(ClientThread c) {
-		clients.add(c);
-		c.start();
-		post("Server", "join " + c.getName());
-		out.println("client " + c + " joined");
-	}
+	public void specReq();
 	
-	public synchronized void leave(ClientThread c) {
-		clients.remove(c);
-		out.println("client " + c + " left");
-	}
-	
+	/**
+	 * send details of the focused object to server
+	 */
+	public void update(Ship ship);
 }

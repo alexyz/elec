@@ -1,4 +1,6 @@
+
 package el;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferStrategy;
@@ -13,50 +15,42 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
+import el.serv.ServerThread;
+
 public class ClientMain {
-	static final PrintStream out = System.out;
-	private static final Map<String,Image> images = new HashMap<String,Image>();
-	static Timer timer;
 	
+	public static final String SHIP1_IMAGE = "/img/ship1.png";
+	public static final String TILE1_IMAGE = "/img/tile1.png";
+
+	private static final PrintStream out = System.out;
+	private static final Map<String, Image> images = new HashMap<String, Image>();
+	private static final Model model = new Model();
+	
+	private static JFrame frame;
+	private static Timer timer;
+	private static ServerThread server;
+
 	public static void main(String[] args) {
-		
+
 		out.println("dir: " + System.getProperty("user.dir"));
-		
-		final Model m = new Model();
-		//final JCView v = new JCView(m);
-		final CanvasView v = new CanvasView(m);
-		
+
+		// final JCView v = new JCView(m);
+		final CanvasView v = new CanvasView(model);
+
 		final JPanel p = new JPanel(new BorderLayout());
 		p.add(v, BorderLayout.CENTER);
 		
-		JMenuItem connectMenuItem = new JMenuItem("Connect");
-		connectMenuItem.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				try {
-					Socket s = new Socket("localhost", 8111);
-					ServerThread st = new ServerThread(s, m);
-					st.start();
-					m.setServerThread(st);
-				} catch (Exception e1) {
-					e1.printStackTrace();
-				}
-			}
-		});
-		
-		JMenu networkMenu = new JMenu("Network");
-		networkMenu.add(connectMenuItem);
-		JMenuBar menuBar = new JMenuBar();
-		menuBar.add(networkMenu);
-		
 		JFrame f = new JFrame();
+		f.setTitle("Electron");
 		f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		//f.setJMenuBar(menuBar);
+		f.setJMenuBar(createMenuBar());
 		f.setContentPane(p);
 		f.pack();
 		f.setVisible(true);
-		
+		frame = f;
+
 		SwingUtilities.invokeLater(new Runnable() {
+
 			@Override
 			public void run() {
 				// do initial paint and print some information
@@ -77,26 +71,109 @@ public class ClientMain {
 				System.out.println("canvas view buffer front buffer accel: " + c.getFrontBufferCapabilities().isAccelerated());
 			}
 		});
-		
+
 		timer = new Timer(25, new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				m.update();
+				model.update();
 				// should skip this if behind
 				v.paintImmediately(0, 0, v.getWidth(), v.getHeight());
 			}
 		});
+		
 		timer.start();
 	}
+
+	private static JMenuBar createMenuBar() {
+		JMenuItem connectMenuItem = new JMenuItem("Connect (localhost/8111)");
+		connectMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					Socket socket = new Socket("localhost", 8111);
+					ServerThread server = new ServerThread(socket, model);
+					server.start();
+					model.setServer(server);
+					ClientMain.server = server;
+					
+				} catch (Exception e1) {
+					e1.printStackTrace();
+				}
+			}
+		});
+		
+		JMenuItem enterReqMenuItem = new JMenuItem("Request Enter");
+		enterReqMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (server != null) {
+					server.enterReq();
+				} else {
+					JOptionPane.showMessageDialog(frame, "Not connected");
+				}
+			}
+		});
+		
+		JMenuItem specMenuItem = new JMenuItem("Spectate");
+		specMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (server != null) {
+					server.specReq();
+					// wait for server?
+					model.spec();
+				} else {
+					JOptionPane.showMessageDialog(frame, "Not connected");
+				}
+			}
+		});
+		
+		JMenuItem enterMenuItem = new JMenuItem("Enter");
+		enterMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				model.enter(-1);
+			}
+		});
+
+		JMenu serverMenu = new JMenu("Server");
+		serverMenu.add(connectMenuItem);
+		serverMenu.add(enterReqMenuItem);
+		serverMenu.add(specMenuItem);
+		
+		JMenu localMenu = new JMenu("Local");
+		localMenu.add(enterMenuItem);
+		
+		JMenuBar menuBar = new JMenuBar();
+		menuBar.add(serverMenu);
+		menuBar.add(localMenu);
+		return menuBar;
+	}
+
+	/**
+	 * Increase frame rate
+	 */
 	static void faster() {
 		timer.setDelay(timer.getDelay() - 1);
 	}
+
+	/**
+	 * Reduce frame rate
+	 */
 	static void slower() {
 		timer.setDelay(timer.getDelay() + 1);
 	}
-	static int delay() {
+
+	/**
+	 * Get delay between frames
+	 */
+	static int getDelay() {
 		return timer.getDelay();
 	}
+
+	/**
+	 * Get cached image
+	 */
 	public static Image getImage(String name) {
 		Image image = images.get(name);
 		if (image == null) {
@@ -107,8 +184,8 @@ public class ClientMain {
 				GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 				GraphicsDevice gd = ge.getDefaultScreenDevice();
 				GraphicsConfiguration gc = gd.getDefaultConfiguration();
-				image = gc.createCompatibleImage(i.getWidth(),i.getHeight(),Transparency.BITMASK);
-				image.getGraphics().drawImage(i,0,0,null);
+				image = gc.createCompatibleImage(i.getWidth(), i.getHeight(), Transparency.BITMASK);
+				image.getGraphics().drawImage(i, 0, 0, null);
 				images.put(name, image);
 			} catch (IOException e) {
 				throw new RuntimeException(e);
@@ -117,6 +194,3 @@ public class ClientMain {
 		return image;
 	}
 }
-
-
-

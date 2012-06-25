@@ -11,55 +11,67 @@ import el.phys.Circle;
  * Simple subclass of moving object, can draw a ship and spawn bullets
  */
 public class Ship extends MovingFgObject {
-	private final Image i;
 	
+	/**
+	 * image used to draw ship
+	 */
+	private final Image image;
 	/**
 	 * Last time guns were fired
 	 */
 	private final float[] guntime = new float[4];
-	
 	/**
 	 * Guns and mountings
 	 */
-	private final Gun[] guns = new Gun[4];
-	
+	private final Gun[] guns;
+	/**
+	 * ships energy
+	 */
 	private float energy = 2000f;
+	/**
+	 * last time thrusters were drawn
+	 */
+	private float thrusttime;
     
-    public Ship(int mx, int my) {
+    public Ship(ShipType type, int mx, int my) {
     	super(new Circle(mx, my, 24));
-    	i = ClientMain.getImage("/img/ship1.png");
-    	init();
+    	
+    	image = ClientMain.getImage(type.img);
+    	maxv = type.maxv;
+    	xres = type.xres;
+    	yres = type.yres;
+    	rotres = type.rotres;
+    	guns = type.guns;
     }
     
-    private void init() {
-    	maxv = 1000f;
-    	xres = 0.9f;
-    	yres = 0.9f;
-    	rotres = 0.25f;
-    	guns[0] = new Gun(Gun.Type.gun2, 0.2f, 150f, new Mount(10, -15, 0), new Mount(-10, -15, 0));
-    	guns[1] = new Gun(Gun.Type.bomb2, 0.5f, 150f, new Mount(0, -15, 0));
-    	guns[2] = new Gun(Gun.Type.bomb4, 1f, 200f, new Mount(0, -8, 0));
+    @Override
+	public int read(String[] args, int i) {
+    	i = super.read(args, i);
+    	energy = Float.parseFloat(args[i++]);
+    	return i;
+    }
+    
+    @Override
+	public void write(StringBuilder sb) {
+    	super.write(sb);
+    	sb.append(energy).append(" ");
     }
     
     @Override
 	protected void paintAuto(Graphics2D g) {
         g.rotate(f);
-        g.drawImage(i,(int)-c.r,(int)-c.r,null);
+        g.drawImage(image,(int)-c.r,(int)-c.r,null);
     }
     
     @Override
 	public void left() {
-    	//fd -= 0.1;
-    	f -= pi / 30f;
+    	f -= pi / 32f;
     }
     
     @Override
 	public void right() {
-    	//fd += 0.1;
-    	f += pi / 30f;
+    	f += pi / 32f;
     }
-    
-    float thrusttime;
     
     @Override
     public void up() {
@@ -74,6 +86,7 @@ public class Ship extends MovingFgObject {
     		// thruster angle
     		float dx = getTransDX(pi, 75);
     		float dy = getTransDY(pi, 75);
+    		
     		model.addTransObject(new Exhaust(x, y, dx, dy, t));
     	}
     }

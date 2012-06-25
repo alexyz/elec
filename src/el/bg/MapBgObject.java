@@ -57,6 +57,10 @@ public class MapBgObject extends BgObject {
 		// need to know if line intersects with any tile
 		// println("checking map intersect with %f,%f -> %f,%f", lx1, ly1, lx2,
 		// ly2);
+		
+		// FIXME returns first collision and not closest collision
+		// could just add all collisions to list and pick closest
+		
 		Intersection r;
 		for (Tile t : tiles)
 			if ((r = t.intersects(i, c, tx, ty)) != null)
