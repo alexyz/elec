@@ -36,8 +36,8 @@ public class Ship extends MovingFgObject {
     	xres = 0.9f;
     	yres = 0.9f;
     	rotres = 0.25f;
-    	guns[0] = new Gun(Gun.Type.gun2, 0.2f, 150f, new Mount(8, 0, 0), new Mount(-8, 0, 0));
-    	guns[1] = new Gun(Gun.Type.bomb2, 0.5f, 150f, new Mount(0, -8, 0));
+    	guns[0] = new Gun(Gun.Type.gun2, 0.2f, 150f, new Mount(10, -15, 0), new Mount(-10, -15, 0));
+    	guns[1] = new Gun(Gun.Type.bomb2, 0.5f, 150f, new Mount(0, -15, 0));
     	guns[2] = new Gun(Gun.Type.bomb4, 1f, 200f, new Mount(0, -8, 0));
     }
     
@@ -68,14 +68,13 @@ public class Ship extends MovingFgObject {
     	// rate limit
     	if (t - thrusttime > 0.0625) {
     		thrusttime = t;
-    		
-    		float bdx = sin(f + pi) * 75f + vx;
-    		float bdy = -cos(f + pi) * 75f + vy;
-    		
-    		// rotate the gun mount offsets
-    		//float x = c.x + cos(f) * mount.x - sin(f) * mount.y;
-    		//float y = c.y + sin(f) * mount.x + cos(f) * mount.y;
-    		model.addTransObject(new Exhaust(c.x, c.y, bdx, bdy, t));
+    		// thruster position
+    		float x = getTransX(0, 20);
+    		float y = getTransY(0, 20);
+    		// thruster angle
+    		float dx = getTransDX(pi, 75);
+    		float dy = getTransDY(pi, 75);
+    		model.addTransObject(new Exhaust(x, y, dx, dy, t));
     	}
     }
     
@@ -94,19 +93,20 @@ public class Ship extends MovingFgObject {
     			guntime[n] = t;
 
     			for (Mount mount : gun.mounts) {
-    				float bdx = sin(f + mount.f) * gun.velocity + vx;
-    				float bdy = -cos(f + mount.f) * gun.velocity + vy;
+    				// gun position, rotate the gun mount offsets
+    				float x = getTransX(mount.x, mount.y);
+    				float y = getTransY(mount.x, mount.y);
     				
-    				// rotate the gun mount offsets
-    				float x = c.x + cos(f) * mount.x - sin(f) * mount.y;
-    				float y = c.y + sin(f) * mount.x + cos(f) * mount.y;
+    				// bullet velocity vector
+    				float dx = getTransDX(mount.f, gun.velocity);
+    				float dy = getTransDY(mount.f, gun.velocity);
     				
-    				model.addTransObject(new Bullet(gun.type, t, x, y, bdx, bdy));
+    				model.addTransObject(new Bullet(gun.type, t, x, y, dx, dy));
     			}
     		}
     	}
     }
-    
+
     @Override
 	public String toString() {
     	return String.format("Ship[%.0f]", energy) + super.toString();

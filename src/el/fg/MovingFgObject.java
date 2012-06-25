@@ -11,19 +11,19 @@ abstract class MovingFgObject extends FgObject  {
 	/**
 	 * Max velocity
 	 */
-	float maxv = 0f;
+	protected float maxv = 0f;
 	/**
 	 * X wind resistance (0=max 1=none)
 	 */
-	float xres = 1f;
+	protected float xres = 1f;
 	/**
 	 * Y wind resistance
 	 */
-	float yres = 1f;
+	protected float yres = 1f;
 	/**
 	 * Rotation resistance
 	 */
-	float rotres = 1f;
+	protected float rotres = 1f;
 	
     /** movement vector in pixels/sec */
     protected float vx, vy;
@@ -115,6 +115,34 @@ abstract class MovingFgObject extends FgObject  {
     	if (rotres != 1f)
     		fd *= pow(rotres, dt);
     }
+
+    /**
+     * get x position of an object emerging from this object at the given translation from origin
+     */
+    protected float getTransX(float tx, float ty) {
+    	return c.x + cos(f) * tx - sin(f) * ty;
+    }
+    
+    /**
+     * get y position of an object emerging from this object at the given translation from origin
+     */
+    protected float getTransY(float tx, float ty) {
+    	return c.y + sin(f) * tx + cos(f) * ty;
+    }
+    
+    /**
+     * get x velocity of an object emerging from this object at the given angle and speed
+     */
+    protected float getTransDX(float tf, float tv) {
+    	return sin(f + tf) * tv + vx;
+    }
+    
+    /**
+     * get y velocity of an object emerging from this object at the given angle and speed
+     */
+    protected float getTransDY(float tf, float tv) {
+    	return -cos(f + tf) * tv + vy;
+    }
     
     /**
      * Called on collision.
@@ -127,19 +155,20 @@ abstract class MovingFgObject extends FgObject  {
     /**
      * Returns the current velocity
      */
-    public float velocity() {
+    protected float velocity() {
     	return hypot(vx, vy);
     }
     
     /**
      * Returns the current velocity angle (not the facing angle!)
      */
-    public float angle() {
+    protected float angle() {
     	return atan2(vx, -vy);
     }
     
-    public String toString() {
-    	return String.format("MovingFgObject[d=%2.0f,%2.0f f=%3.0f a=%3.0f v=%2.0f]", 
+    @Override
+	public String toString() {
+    	return String.format("MovingFgObject[d=%2.0f,%2.0f fa=%3.0f va=%3.0f v=%2.0f]", 
     			vx, vy, deg(f), deg(angle()), velocity()) + super.toString();
     }
     
