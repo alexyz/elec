@@ -25,6 +25,7 @@ public class ClientMain {
 	private static final PrintStream out = System.out;
 	private static final Map<String, Image> images = new HashMap<String, Image>();
 	private static final Model model = new Model();
+	private static final CanvasView view = new CanvasView(model);
 	
 	private static JFrame frame;
 	private static Timer timer;
@@ -34,19 +35,18 @@ public class ClientMain {
 
 		out.println("dir: " + System.getProperty("user.dir"));
 
-		// final JCView v = new JCView(m);
-		final CanvasView v = new CanvasView(model);
-
 		final JPanel p = new JPanel(new BorderLayout());
-		p.add(v, BorderLayout.CENTER);
+		p.add(view, BorderLayout.CENTER);
 		
 		JFrame f = new JFrame();
 		f.setTitle("Electron");
+		// TODO OS X doesn't close connection, should do manually
 		f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		f.setJMenuBar(createMenuBar());
 		f.setContentPane(p);
 		f.pack();
 		f.setVisible(true);
+		
 		frame = f;
 
 		SwingUtilities.invokeLater(new Runnable() {
@@ -54,14 +54,15 @@ public class ClientMain {
 			@Override
 			public void run() {
 				// do initial paint and print some information
-				v.paintImmediately(0, 0, v.getWidth(), v.getHeight());
+				System.out.println("view request focus: " + view.requestFocusInWindow());
+				view.paintImmediately(0, 0, view.getWidth(), view.getHeight());
 				System.out.println("panel double buffered: " + p.isDoubleBuffered());
 				System.out.println("panel opaque: " + p.isOpaque());
 				System.out.println("panel optimized: " + p.isOptimizedDrawingEnabled());
 				System.out.println("panel lightweight: " + p.isLightweight());
-				System.out.println("view double buffered: " + v.isDoubleBuffered());
-				System.out.println("view opaque: " + v.isOpaque());
-				BufferStrategy bs = v.getBufferStrategy();
+				System.out.println("view double buffered: " + view.isDoubleBuffered());
+				System.out.println("view opaque: " + view.isOpaque());
+				BufferStrategy bs = view.getBufferStrategy();
 				System.out.println("canvas view buffer strategy: " + bs.getClass());
 				BufferCapabilities c = bs.getCapabilities();
 				System.out.println("canvas view buffer full screen required: " + c.isFullScreenRequired());
@@ -77,7 +78,7 @@ public class ClientMain {
 			public void actionPerformed(ActionEvent e) {
 				model.update();
 				// should skip this if behind
-				v.paintImmediately(0, 0, v.getWidth(), v.getHeight());
+				view.paintImmediately(0, 0, view.getWidth(), view.getHeight());
 			}
 		});
 		
@@ -95,7 +96,7 @@ public class ClientMain {
 					server.start();
 					model.setServer(server);
 					ClientMain.server = server;
-					
+					out.println("view request focus: " + view.requestFocusInWindow());
 				} catch (Exception e1) {
 					e1.printStackTrace();
 				}
@@ -111,6 +112,8 @@ public class ClientMain {
 				} else {
 					JOptionPane.showMessageDialog(frame, "Not connected");
 				}
+				// have to request focus on view otherwise menu bar keeps focus
+				out.println("view request focus: " + view.requestFocusInWindow());
 			}
 		});
 		
@@ -133,6 +136,7 @@ public class ClientMain {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				model.enter(-1);
+				out.println("view request focus: " + view.requestFocusInWindow());
 			}
 		});
 

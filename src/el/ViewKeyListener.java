@@ -34,6 +34,7 @@ class ViewKeyListener implements KeyListener {
 	@Override
 	public void keyPressed(KeyEvent e) {
 		int c = e.getKeyCode();
+		System.out.println("pressed " + c);
 		switch (c) {
 			case KeyEvent.VK_UP:
 				// needs to set isUp

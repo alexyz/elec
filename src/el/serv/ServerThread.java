@@ -89,7 +89,8 @@ public class ServerThread extends Thread implements Server {
 		}
 	}
 	
-	public long getServerTime() {
+	@Override
+	public long getTime() {
 		long t = System.nanoTime();
 		return serverTime + t - clientTime;
 	}

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -13,7 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 class ClientThread extends Thread {
 	
-	/** update time on client (long) */
+	/** tell client new server time (long) */
 	public static final String TIME = "time";
 	/** tell client with id to enter (int) */
 	public static final String ENTER = "enter";
@@ -25,16 +26,23 @@ class ClientThread extends Thread {
 	public static final String UPDATEOBJ = "update-obj";
 	
 	private static final PrintStream out = System.out;
-	private static final AtomicInteger idSequence = new AtomicInteger();
+	private static final AtomicInteger idSequence = new AtomicInteger(1000);
 	
 	/** client identifier */
 	public final int id;
+	private final Socket socket;
 	/** input reader for receiving data from the client */
 	private final BufferedReader clientIn;
 	/** output stream for sending data to client */
 	private final PrintStream clientOut;
 	
+	/** is this client entered */
+	public boolean entered;
+	/** last update received from client */
+	public String lastData;
+	
 	public ClientThread(Socket socket) throws Exception {
+		this.socket = socket;
 		setDaemon(true);
 		setPriority(Thread.NORM_PRIORITY);
 		this.id = idSequence.getAndIncrement();
@@ -46,7 +54,8 @@ class ClientThread extends Thread {
 	@Override
 	public void run() {
 		try {
-			send(ID + " " + id);
+			// TODO send server state to new client...
+			ServerMain.clientInit(this);
 			
 			String line;
 			while ((line = clientIn.readLine()) != null) {
@@ -57,13 +66,13 @@ class ClientThread extends Thread {
 				// commands from client to server
 				
 				if (cmd.equals(ServerThread.ENTERREQ)) {
-					ServerMain.enterReq(this);
+					ServerMain.clientEnterReq(this);
 					
 				} else if (cmd.equals(ServerThread.SPEC)) {
-					ServerMain.spec(this);
+					ServerMain.clientSpec(this);
 					
 				} else if (cmd.equals(ServerThread.UPDATE)) {
-					ServerMain.update(this, line.substring(line.indexOf(" ") + 1));
+					ServerMain.clientUpdate(this, line.substring(line.indexOf(" ") + 1));
 					
 				} else {
 					out.println(this + ": unknown command " + line);
@@ -75,9 +84,12 @@ class ClientThread extends Thread {
 		}
 	}
 	
+	/** send data to client */
 	public void send(String line) {
 		out.println(this + ": send " + line);
+		//out.println("  connected=" + socket.isConnected() + " closed=" + socket.isClosed() + " indown=" + socket.isInputShutdown() + " outdown=" + socket.isOutputShutdown());
 		clientOut.println(line);
+		clientOut.flush();
 	}
 	
 }

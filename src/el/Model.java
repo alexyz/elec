@@ -6,7 +6,6 @@ import java.util.*;
 import el.phys.*;
 import el.phys.cs.CSIntersect;
 import el.serv.Server;
-import el.serv.ServerThread;
 import el.bg.*;
 import el.fg.*;
 
@@ -21,6 +20,8 @@ import el.fg.*;
  */
 public class Model {
 	
+	private static final float NS_IN_S = 1000000000.0f;
+
 	public static final int centrex = 500000, centrey = 500000;
 	
 	private static final PrintStream out = System.out;
@@ -50,11 +51,14 @@ public class Model {
 	 * Collision detection function
 	 */
 	private final Intersect i = new CSIntersect();
-	
 	/**
-	 * time of last update
+	 * time of last call to update
 	 */
-	private float elapsedTime;
+	private float localTime;
+	/**
+	 * time the last focus object update was sent to server
+	 */
+	float lastUpdate;
 	/**
 	 * currently focused object
 	 */
@@ -103,25 +107,24 @@ public class Model {
 		System.out.println("focus: " + focusObj);
 	}
 	
-	float lastUpdate;
-	
 	/**
 	 * update the world
 	 */
 	void update() {
-		float time = (System.nanoTime() - this.startTime) / 1000000000.0f;
-		float timeDelta = time - this.elapsedTime;
-		elapsedTime = time;
+		float time = (System.nanoTime() - this.startTime) / NS_IN_S;
+		float timeDelta = time - this.localTime;
+		localTime = time;
 		
 		// apply actions for focused object
-		if (actions.size() > 0) {
+		if (actions.size() > 0 || lastUpdate == 0) {
 			for (FgRunnable r : actions) {
 				r.run(focusObj);
 			}
-			if (server != null && (elapsedTime - lastUpdate) > 0.5 && focusObj instanceof Ship) {
+			if (server != null && (localTime - lastUpdate) > 0.125 && focusObj instanceof Ship) {
 				// update server - only if there is currently an action
+				// FIXME also need to update after reflect
 				server.update((Ship) focusObj);
-				lastUpdate = elapsedTime;
+				lastUpdate = localTime;
 			}
 		}
 		
@@ -144,7 +147,7 @@ public class Model {
 	}
 	
 	public float getTime() {
-		return elapsedTime;
+		return localTime;
 	}
 	
 	/**
@@ -196,8 +199,16 @@ public class Model {
 
 	@Override
 	public String toString() {
-		return String.format("Model[x,y=%d,%d t=%.2f objs=%d,%d]%s", 
-				getX(), getY(), elapsedTime, objects.size(), transObjects.size(), actions);
+		float serverTime = 0;
+		if (server != null) {
+			serverTime = server.getTime() / NS_IN_S;
+		}
+		return String.format("Model[x,y=%d,%d objs=%d,%d t=%.2f st=%f]%s", 
+				getX(), getY(), 
+				objects.size(), transObjects.size(), 
+				localTime, 
+				serverTime, 
+				actions);
 	}
 	
 	public FgObject getFocus() {

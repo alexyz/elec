@@ -35,9 +35,9 @@ public abstract class FgObject {
 	
 	/** update object from array, return pointer to next element */
 	public int read(String[] args, int i) {
-    	c.x = Integer.parseInt(args[i++]);
-    	c.y = Integer.parseInt(args[i++]);
-    	c.r = Integer.parseInt(args[i++]);
+    	c.x = Float.parseFloat(args[i++]);
+    	c.y = Float.parseFloat(args[i++]);
+    	c.r = Float.parseFloat(args[i++]);
     	return i;
     }
     

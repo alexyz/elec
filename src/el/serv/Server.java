@@ -15,4 +15,6 @@ public interface Server {
 	 * send details of the focused object to server
 	 */
 	public void update(Ship ship);
+	
+	public long getTime();
 }
