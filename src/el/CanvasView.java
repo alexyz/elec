@@ -34,7 +34,8 @@ class CanvasView extends Canvas {
 				int x = getModelX() + p.x;
 				int y = getModelY() + p.y;
 				System.out.println("view mouse clicked: " + x + ", " + y);
-				model.getMap().place(x, y, e.getButton() == MouseEvent.BUTTON3);
+				//model.getMap().place(x, y, e.getButton() == MouseEvent.BUTTON3);
+				model.updateMap(x, y, e.getButton());
 			}
 			@Override
 			public void mouseMoved(MouseEvent e) {
@@ -158,10 +159,10 @@ class CanvasView extends Canvas {
 		long f = Runtime.getRuntime().freeMemory();
 		if (f > freeMem) {
 			long t = System.nanoTime();
-			gcTimeDelta = (t - gcTime) / 1000000f;
+			gcTimeDelta = (t - gcTime) / 1000000000f;
 			gcTime = t;
 		}
 		freeMem = f;
-		return String.format("View[%d,%d] [d=%d gc=%.2f]", getWidth(), getHeight(), ClientMain.getDelay(), gcTimeDelta);
+		return String.format("View[%d,%d] [fps=%.1f gc=%.1fs]", getWidth(), getHeight(), 1000f / ClientMain.getDelay(), gcTimeDelta);
 	}
 }

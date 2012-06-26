@@ -5,26 +5,37 @@ import java.util.*;
 
 import el.phys.*;
 import el.phys.cs.CSIntersect;
-import el.serv.Server;
+import el.serv.ServerThread;
 import el.bg.*;
 import el.fg.*;
 
 /** 
- * 1M squared.
+ * Client model.
+ * Play area is 1M pixels squared. Co-ordinates are represented by floats, 
+ * so any more than 1M would start to lose precision.
  * 
  * By convention, variables starting with:
  * sx, sy or vx, vy - screen co-ordinates
  * mx, my - model co-ordinates
  * qx, qy - model quadrant co-ordinates (for some quadrant size)
  * dx, dy - deltas in px/sec
+ * 
+ * This class is not thread safe. Concurrent access must be externally synchronized
+ * (i.e. from AWT event thread and ServerThread instance).
  */
 public class Model {
 	
+	/** Nanoseconds in second */
 	private static final float NS_IN_S = 1000000000.0f;
 
+	/** centre co-ordinates */
 	public static final int centrex = 500000, centrey = 500000;
 	
 	private static final PrintStream out = System.out;
+	
+	//
+	// final fields
+	//
 	
 	/**
 	 * permanent foreground objects (ships)
@@ -51,14 +62,23 @@ public class Model {
 	 * Collision detection function
 	 */
 	private final Intersect i = new CSIntersect();
+	
+	//
+	// mutable fields
+	//
+	
 	/**
 	 * time of last call to update
 	 */
-	private float localTime;
+	private float updateTime;
 	/**
 	 * time the last focus object update was sent to server
 	 */
-	float lastUpdate;
+	private float lastUpdate;
+	/**
+	 * Issue a server update on next call to update()
+	 */
+	private boolean forceUpdate;
 	/**
 	 * currently focused object
 	 */
@@ -66,10 +86,18 @@ public class Model {
 	/**
 	 * the server, if any
 	 */
-	private Server server;
+	private ServerThread server;
+	/**
+	 * users ship id, if any
+	 */
+	private int selfId;
 	
 	public Model() {
 		//
+	}
+	
+	public int getId() {
+		return selfId;
 	}
 	
 	/**
@@ -77,18 +105,27 @@ public class Model {
 	 */
 	public void enter(int id) {
 		Ship ship = new Ship(ShipType.types[0], centrex - 20, centrey);
+		this.selfId = id;
 		focusObj = ship;
 		// TODO need to put focused object on top
 		addFgObject(ship, id);
+		forceUpdate = true;
 	}
 	
 	/**
-	 * remove the user from the game
+	 * remove the given user (possibly self) from the game
 	 */
-	public void spec() {
-		if (focusObj != null) {
-			objects.remove(focusObj);
+	public void spec(int id) {
+		Iterator<FgObject> i = objects.iterator();
+		while (i.hasNext()) {
+			if (i.next().getId() == id) {
+				i.remove();
+				break;
+			}
+		}
+		if (focusObj != null && focusObj.getId() == id) {
 			focusObj = modelObj;
+			this.selfId = 0;
 		}
 	}
 	
@@ -110,26 +147,43 @@ public class Model {
 	/**
 	 * update the world
 	 */
-	void update() {
-		float time = (System.nanoTime() - this.startTime) / NS_IN_S;
-		float timeDelta = time - this.localTime;
-		localTime = time;
+	public void update() {
+		
+		float floatTime, floatTimeDelta;
+		
+		if (server != null) {
+			floatTime = server.getTime() / NS_IN_S;
+			floatTimeDelta = floatTime - this.updateTime;
+			
+		} else {
+			floatTime = (System.nanoTime() - this.startTime) / NS_IN_S;
+			floatTimeDelta = floatTime - this.updateTime;
+		}
+		
+		this.updateTime = floatTime;
+		
 		
 		// apply actions for focused object
-		if (actions.size() > 0 || lastUpdate == 0) {
+		if (actions.size() > 0 && (focusObj == modelObj || focusObj.getId() == selfId)) {
+			// FIXME don't apply actions unless it's players own ship
 			for (FgRunnable r : actions) {
 				r.run(focusObj);
 			}
-			if (server != null && (localTime - lastUpdate) > 0.125 && focusObj instanceof Ship) {
-				// update server - only if there is currently an action
-				// FIXME also need to update after reflect
-				server.update((Ship) focusObj);
-				lastUpdate = localTime;
+			if ((floatTime - lastUpdate) > 0.125) {
+				forceUpdate = true;
 			}
 		}
-		
+
 		for (FgObject o : objects) {
-			o.update(time, timeDelta);
+			o.update(floatTime, floatTimeDelta);
+		}
+		
+		// send to server - after possible reflect
+		if (server != null && focusObj instanceof Ship && forceUpdate) {
+			// update focused ship on server
+			server.update((Ship) focusObj);
+			lastUpdate = floatTime;
+			forceUpdate = false;
 		}
 		
 		if (transObjects.size() > 0) {
@@ -137,7 +191,7 @@ public class Model {
 			while (i.hasNext()) {
 				TransMovingFgObject o = i.next();
 				// may inflict damage to objects
-				o.update(time, timeDelta);
+				o.update(floatTime, floatTimeDelta);
 				if (o.remove()) {
 					i.remove();
 				}
@@ -147,19 +201,13 @@ public class Model {
 	}
 	
 	public float getTime() {
-		return localTime;
+		return updateTime;
 	}
 	
-	/**
-	 * Get model x location of currently focused object
-	 */
 	int getX() {
 		return focusObj.getX();
 	}
 	
-	/**
-	 * Get model y location of currently focused object
-	 */
 	int getY() {
 		return focusObj.getY();
 	}
@@ -192,58 +240,61 @@ public class Model {
 	 */
 	void unaction(String name) {
 		FgRunnable action = actionMap.get(name);
-		if (action == null)
+		// check for null as we won't get a null pointer exception otherwise
+		if (action == null) {
 			throw new RuntimeException(name);
+		}
 		actions.remove(action);
+		if (actions.size() == 0) {
+			// let server know last state of focused object
+			// XXX also triggered on fire, should probably only do for movement
+			forceUpdate = true;
+		}
 	}
 
-	@Override
-	public String toString() {
-		float serverTime = 0;
-		if (server != null) {
-			serverTime = server.getTime() / NS_IN_S;
-		}
-		return String.format("Model[x,y=%d,%d objs=%d,%d t=%.2f st=%f]%s", 
-				getX(), getY(), 
-				objects.size(), transObjects.size(), 
-				localTime, 
-				serverTime, 
-				actions);
-	}
-	
 	public FgObject getFocus() {
 		return focusObj;
 	}
 	
+	/** add foreground object with given identifier, sets the model of the object */
 	public void addFgObject(FgObject obj, int id) {
 		obj.setModel(this, id);
 		objects.add(obj);
+		// for benefit of client that has just entered
+		forceUpdate = true;
 	}
 	
-	public void updateFgObject(int id, String[] data, int i) {
+	/** update the state of the given object, called by server */
+	public void updateFgObject(int id, StringTokenizer tokens) {
+		// focused object could be updated if spectating someone else
 		for (FgObject obj : objects) {
 			if (obj.getId() == id) {
-				obj.read(data, i);
+				obj.read(tokens);
 				return;
 			}
 		}
 		System.out.println("could not find object " + id);
 	}
 	
-	public void addTransObject(TransMovingFgObject obj) {
+	public void addTransObject(TransMovingFgObject obj, boolean send) {
 		obj.setModel(this, -1);
 		transObjects.add(0, obj); 
-		
-		// TODO send to server
+		if (send && server != null && obj instanceof Bullet) {
+			server.fireReq((Bullet)obj);
+		}
 	}
 	
 	public Intersect getIntersect() {
 		return i;
 	}
 	
-	public Intersection intersectbg(Circle c, float tx, float ty) {
+	public Intersection intersectbg(FgObject obj, float tx, float ty) {
 		// check collision with map
-		return map.intersects(i, c, tx, ty);
+		Intersection r = map.intersects(i, obj.getPosition(), tx, ty);
+		if (r != null && obj == focusObj) {
+			forceUpdate = true;
+		}
+		return r;
 	}
 	
 	public Intersection intersectfg(Circle c, float tx, float ty, float dam) {
@@ -254,11 +305,36 @@ public class Model {
 		return null;
 	}
 	
-	public void setServer(Server server) {
+	public void setServer(ServerThread server) {
 		this.server = server;
+		// should probably clear here
 	}
 	
 	public MapBgObject getMap() {
 		return map;
 	}
+	
+	public void updateMap(int x, int y, int action) {
+		if (server != null) {
+			server.updateMapReq(x, y, action);
+		} else {
+			map.place(x, y, action);
+		}
+	}
+	
+	@Override
+	public String toString() {
+		float serverTime = 0;
+		if (server != null) {
+			serverTime = server.getTime() / NS_IN_S;
+		}
+		return String.format("Model[id=%d pos=%s objs=%d,%d t=%.1f st=%.1f %s]", 
+				selfId,
+				focusObj.getPosition(),
+				objects.size(), transObjects.size(), 
+				updateTime, 
+				serverTime, 
+				actions);
+	}
+	
 }

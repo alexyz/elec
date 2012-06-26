@@ -76,9 +76,12 @@ public class ClientMain {
 		timer = new Timer(25, new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				model.update();
-				// should skip this if behind
-				view.paintImmediately(0, 0, view.getWidth(), view.getHeight());
+				// don't allow network updates when updating and painting
+				synchronized (model) {
+					model.update();
+					// should skip this if behind
+					view.paintImmediately(0, 0, view.getWidth(), view.getHeight());
+				}
 			}
 		});
 		
@@ -122,9 +125,9 @@ public class ClientMain {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (server != null) {
-					server.specReq();
+					server.spec();
 					// wait for server?
-					model.spec();
+					//model.spec();
 				} else {
 					JOptionPane.showMessageDialog(frame, "Not connected");
 				}
@@ -139,7 +142,7 @@ public class ClientMain {
 				out.println("view request focus: " + view.requestFocusInWindow());
 			}
 		});
-
+		
 		JMenu serverMenu = new JMenu("Server");
 		serverMenu.add(connectMenuItem);
 		serverMenu.add(enterReqMenuItem);

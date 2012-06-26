@@ -3,6 +3,7 @@ package el.bg;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.util.StringTokenizer;
 
 import el.ClientMain;
 import el.phys.Circle;
@@ -14,11 +15,29 @@ import el.phys.Rect;
  * A map tile with useful methods
  */
 public class Tile extends Rect {
-	private final Image i;
+	
+	/**
+	 * Create tile from string
+	 */
+	public static Tile read(StringTokenizer tokens) {
+		int x = Integer.parseInt(tokens.nextToken());
+		int y = Integer.parseInt(tokens.nextToken());
+		return new Tile(x, y);
+	}
+	
+	private final Image image;
 	
 	public Tile(int x, int y) {
 		super(x, y, x + 32, y + 32);
-		i = ClientMain.getImage(ClientMain.TILE1_IMAGE);
+		image = ClientMain.getImage(ClientMain.TILE1_IMAGE);
+	}
+	
+	/**
+	 * write tile to string
+	 */
+	public void write(StringBuilder sb) {
+		sb.append((int) x0).append(" ");
+		sb.append((int) y0).append(" ");
 	}
 	
 	public boolean isat(int x, int y) {
@@ -33,7 +52,7 @@ public class Tile extends Rect {
 		//g.setColor(Color.gray);
 		//int w = (int) width();
 		//g.fillRect(sx, sy, w, w);
-		g.drawImage(i, sx, sy, null);
+		g.drawImage(image, sx, sy, null);
 	}
 	
 	public Intersection intersects(Intersect i, Circle c, float tx, float ty) {

@@ -2,6 +2,7 @@ package el.fg;
 
 import java.awt.*;
 import java.awt.geom.AffineTransform;
+import java.util.StringTokenizer;
 
 import el.phys.Circle;
 import el.Model;
@@ -33,23 +34,27 @@ public abstract class FgObject {
 		this.c = c;
 	}
 	
-	/** update object from array, return pointer to next element */
-	public int read(String[] args, int i) {
-    	c.x = Float.parseFloat(args[i++]);
-    	c.y = Float.parseFloat(args[i++]);
-    	c.r = Float.parseFloat(args[i++]);
-    	return i;
+	/** update object from string */
+	public void read(StringTokenizer tokens) {
+    	c.x = Float.parseFloat(tokens.nextToken());
+		c.y = Float.parseFloat(tokens.nextToken());
+		c.r = Float.parseFloat(tokens.nextToken());
     }
     
 	/** write object to string */
-    public void write(StringBuilder sb) {
+    public StringBuilder write(StringBuilder sb) {
     	sb.append(c.x).append(" ");
     	sb.append(c.y).append(" ");
     	sb.append(c.r).append(" ");
+    	return sb;
     }
     
     public final int getId() {
     	return id;
+    }
+    
+    public final Circle getPosition() {
+    	return c;
     }
 	
 	/**
@@ -148,10 +153,6 @@ public abstract class FgObject {
      * User pressed fire 0-3
      */
 	public void fire(int n) { }
-	
-	public String write() {
-		throw new RuntimeException();
-	}
 	
 	@Override
 	public String toString() {

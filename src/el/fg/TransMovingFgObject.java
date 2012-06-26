@@ -1,6 +1,7 @@
 package el.fg;
 
 import java.awt.Graphics2D;
+import java.util.StringTokenizer;
 
 import el.phys.Circle;
 
@@ -12,7 +13,8 @@ public abstract class TransMovingFgObject extends MovingFgObject {
 	/**
 	 * Start and end time
 	 */
-	protected final float startt, endt;
+	protected float startt, endt;
+	
 	/**
 	 * Set to true for the object to be removed
 	 */
@@ -24,6 +26,21 @@ public abstract class TransMovingFgObject extends MovingFgObject {
 		this.endt = endt;
 	}
 	
+	@Override
+	public void read(StringTokenizer tokens) {
+		super.read(tokens);
+		this.startt = Float.parseFloat(tokens.nextToken());
+		this.endt = Float.parseFloat(tokens.nextToken());
+	}
+	
+	@Override
+	public StringBuilder write(StringBuilder sb) {
+		super.write(sb);
+		sb.append(startt).append(" ");
+		sb.append(endt).append(" ");
+		return sb;
+	}
+	
 	/**
 	 * Returns true if object should be removed
 	 */
@@ -32,12 +49,12 @@ public abstract class TransMovingFgObject extends MovingFgObject {
 	}
 	
 	@Override
-	public void update(float t, float td) {
-		if (t > endt) {
+	public void update(float floatTime, float floatTimeDelta) {
+		if (floatTime > endt) {
 			remove = true;
 			
 		} else {
-			super.update(t, td);
+			super.update(floatTime, floatTimeDelta);
 		}
 	}
 	

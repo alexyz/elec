@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.Socket;
-import java.net.SocketException;
+import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -24,6 +24,12 @@ class ClientThread extends Thread {
 	public static final String ID = "id";
 	/** tell client to update the given object (int) (FGObject) */
 	public static final String UPDATEOBJ = "update-obj";
+	/** tell client to discard any existing map and use given map data (MapBgObject) */
+	public static final String MAPDATA = "map-data";
+	/** tell client to update map tile */
+	public static final String MAPTILE = "map-tile";
+	/** tell client to add bullet */
+	public static final String FIRE = "fire";
 	
 	private static final PrintStream out = System.out;
 	private static final AtomicInteger idSequence = new AtomicInteger(1000);
@@ -54,25 +60,34 @@ class ClientThread extends Thread {
 	@Override
 	public void run() {
 		try {
-			// TODO send server state to new client...
+			// send server state to new client...
 			ServerMain.clientInit(this);
 			
 			String line;
 			while ((line = clientIn.readLine()) != null) {
 				out.println(this + ": received " + line);
-				String[] tk = line.split("\\s+");
-				String cmd = tk[0];
+				StringTokenizer tokens = new StringTokenizer(line);
+				String cmd = tokens.nextToken();
 				
 				// commands from client to server
 				
-				if (cmd.equals(ServerThread.ENTERREQ)) {
+				if (cmd.equals(ServerThread.UPDATE)) {
+					ServerMain.clientUpdate(this, line.substring(line.indexOf(" ") + 1));
+					
+				} else if (cmd.equals(ServerThread.FIREREQ)) {
+					ServerMain.clientFireReq(this, line.substring(line.indexOf(" ") + 1));
+					
+				} else if (cmd.equals(ServerThread.ENTERREQ)) {
 					ServerMain.clientEnterReq(this);
 					
 				} else if (cmd.equals(ServerThread.SPEC)) {
 					ServerMain.clientSpec(this);
 					
-				} else if (cmd.equals(ServerThread.UPDATE)) {
-					ServerMain.clientUpdate(this, line.substring(line.indexOf(" ") + 1));
+				} else if (cmd.equals(ServerThread.MAPTILEREQ)) {
+					int x = Integer.parseInt(tokens.nextToken());
+					int y = Integer.parseInt(tokens.nextToken());
+					int act = Integer.parseInt(tokens.nextToken());
+					ServerMain.clientUpdateMap(this, x, y, act);
 					
 				} else {
 					out.println(this + ": unknown command " + line);
@@ -81,14 +96,20 @@ class ClientThread extends Thread {
 			
 		} catch (IOException e) {
 			out.println(this + ": " + e);
+			ServerMain.removeClient(this);
 		}
 	}
 	
 	/** send data to client */
-	public void send(String line) {
-		out.println(this + ": send " + line);
-		//out.println("  connected=" + socket.isConnected() + " closed=" + socket.isClosed() + " indown=" + socket.isInputShutdown() + " outdown=" + socket.isOutputShutdown());
-		clientOut.println(line);
+	public void send(String command, Object... args) {
+		StringBuilder sb = new StringBuilder();
+		sb.append(command);
+		for (Object o : args) {
+			sb.append(" ");
+			sb.append(o);
+		}
+		out.println(this + ": send " + sb);
+		clientOut.println(sb);
 		clientOut.flush();
 	}
 	

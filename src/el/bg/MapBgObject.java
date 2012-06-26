@@ -15,19 +15,41 @@ import el.phys.Intersection;
  */
 public class MapBgObject extends BgObject {
 	
+	public static final int ADD_ACTION = 1, REMOVE_ACTION = 3;
+	
 	// load and save
 	// place and delete
 	
 	// TODO use a map
-	ArrayList<Tile> tiles = new ArrayList<Tile>();
+	private final ArrayList<Tile> tiles = new ArrayList<Tile>();
 	
 	public MapBgObject() {
-		tiles.add(new Tile(500000, 499920));
-		tiles.add(new Tile(500100, 499920));
-		Random r = new Random();
-		for (int n = 0; n < 10; n++) {
-			tiles.add(new Tile(499500+r.nextInt(1000),499500+r.nextInt(1000)));
+		//
+	}
+	
+	public void basic() {
+		tiles.add(new Tile(500000 - 64, 500000 + 128));
+		tiles.add(new Tile(500000 + 64, 500000 + 128));
+	}
+	
+	/**
+	 * Read map from string
+	 */
+	public void read(StringTokenizer tokens) {
+		tiles.clear();
+		while (tokens.hasMoreTokens()) {
+			tiles.add(Tile.read(tokens));
 		}
+	}
+	
+	/**
+	 * Write map to string
+	 */
+	public StringBuilder write(StringBuilder sb) {
+		for (Tile tile : tiles) {
+			tile.write(sb);
+		}
+		return sb;
 	}
 	
 	@Override
@@ -68,14 +90,14 @@ public class MapBgObject extends BgObject {
 		return null;
 	}
 	
-	public void place(int mx, int my, boolean rem) {
+	public void place(int mx, int my, int action) {
 		System.out.println(String.format("place/remove map tile at %d,%d", mx, my));
 		Iterator<Tile> i = tiles.iterator();
 		while (i.hasNext()) {
 			Tile t = i.next();
 			if (t.isat(mx, my)) {
 				System.out.println("found tile");
-				if (rem) {
+				if (action == REMOVE_ACTION) {
 					System.out.println("removing tile");
 					i.remove();
 				}
@@ -83,6 +105,7 @@ public class MapBgObject extends BgObject {
 			}
 		}
 		System.out.println("placing tile");
+		// blank out bottom 16 bits - should depend on tile
 		int m = ~0xf;
 		tiles.add(new Tile(mx & m, my & m));
 	}

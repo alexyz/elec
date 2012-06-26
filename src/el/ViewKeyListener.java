@@ -13,7 +13,7 @@ class ViewKeyListener implements KeyListener {
 	
 	@Override
 	public void keyTyped(java.awt.event.KeyEvent e) {
-		System.out.println("typed '" + e.getKeyChar() + "'");
+		//System.out.println("typed '" + e.getKeyChar() + "'");
 		switch (e.getKeyChar()) {
 			case '¤':
 			case '`':
@@ -34,7 +34,7 @@ class ViewKeyListener implements KeyListener {
 	@Override
 	public void keyPressed(KeyEvent e) {
 		int c = e.getKeyCode();
-		System.out.println("pressed " + c);
+		//System.out.println("pressed " + c);
 		switch (c) {
 			case KeyEvent.VK_UP:
 				// needs to set isUp

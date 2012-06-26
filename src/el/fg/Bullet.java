@@ -1,5 +1,6 @@
 package el.fg;
 import java.awt.Graphics2D;
+import java.util.StringTokenizer;
 
 import el.phys.Circle;
 
@@ -10,28 +11,12 @@ public class Bullet extends TransMovingFgObject {
 	
 	static final float lifet = 3f;
 	
-	/*
-    public String write() {
-    	// Client2 [servertime] [localtime] addTrans Ordnance type t dx dy x y
-    	return String.format("%s %s %f %f %f %f %f",
-    			getClass().getSimpleName(),
-    			type,
-    			endt - lifet,
-    			c.x, c.y, vx, vy);
-    }
-    
-    public static Bullet read(float toff, String[] s, int p) {
-    	Gun.Type type = Gun.types.get(s[p++]);
-    	float t = Float.parseFloat(s[p++]);
-    	float x = Float.parseFloat(s[p++]);
-    	float y = Float.parseFloat(s[p++]);
-    	float dx = Float.parseFloat(s[p++]);
-    	float dy = Float.parseFloat(s[p++]);
-    	return new Bullet(type, t + toff, x, y, dx, dy);
-    }
-	*/
+	private Gun.Type type;
 	
-	private final Gun.Type type;
+	public Bullet(StringTokenizer tokens) {
+		super(new Circle(), 0, 0);
+		read(tokens);
+	}
 	
 	public Bullet(Gun.Type type, float t, float x, float y, float dx, float dy) {
 		super(new Circle(x, y, type.radius), t, t + lifet);
@@ -39,6 +24,19 @@ public class Bullet extends TransMovingFgObject {
 		this.vx = dx;
 		this.vy = dy;
     }
+	
+	@Override
+	public void read(StringTokenizer tokens) {
+		super.read(tokens);
+		type = Gun.Type.valueOf(tokens.nextToken());
+	}
+	
+	@Override
+	public StringBuilder write(StringBuilder sb) {
+		super.write(sb);
+		sb.append(type).append(" ");
+		return sb;
+	}
 	
 	@Override
 	public void paint(Graphics2D g) {

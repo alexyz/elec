@@ -27,4 +27,9 @@ public class ModelObject extends FgObject {
 	public void up() {
 		c.y -= 5;
 	}
+	@Override
+	public String toString() {
+		// TODO Auto-generated method stub
+		return "ModelObject[]" + super.toString();
+	}
 }
