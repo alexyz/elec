@@ -21,6 +21,8 @@ public class ClientMain {
 	
 	public static final String SHIP1_IMAGE = "/img/ship1.png";
 	public static final String TILE1_IMAGE = "/img/tile1.png";
+	
+	public static long renderTime, freeTime;
 
 	private static final PrintStream out = System.out;
 	private static final Map<String, Image> images = new HashMap<String, Image>();
@@ -30,6 +32,7 @@ public class ClientMain {
 	private static JFrame frame;
 	private static Timer timer;
 	private static ServerThread server;
+	private static long endTime;
 
 	public static void main(String[] args) {
 
@@ -76,12 +79,19 @@ public class ClientMain {
 		timer = new Timer(25, new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				long startt = System.nanoTime();
+				freeTime = startt - endTime;
+				
 				// don't allow network updates when updating and painting
 				synchronized (model) {
 					model.update();
 					// should skip this if behind
 					view.paintImmediately(0, 0, view.getWidth(), view.getHeight());
 				}
+				
+				long endt = System.nanoTime();
+				endTime = endt;
+				renderTime = endt - startt;
 			}
 		});
 		

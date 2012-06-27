@@ -14,10 +14,17 @@ import java.util.List;
  * Exactly the same as JCView except uses canvas instead of JComponent
  */
 class CanvasView extends Canvas {
+	
+	//
+	// final fields
+	//
+	
 	private final Model model;
 	
-	private long freeMem, gcTime;
-	private float gcTimeDelta;
+	//
+	// mutable fields
+	//
+	
 	private Point mousePoint;
 	
 	public CanvasView(final Model model) {
@@ -143,26 +150,29 @@ class CanvasView extends Canvas {
 		// long f = Runtime.getRuntime().freeMemory() / 1000;
 		// long tl = Runtime.getRuntime().totalMemory() / 1000;
 		int lh = g.getFontMetrics().getHeight();
-		g.setColor(Color.white);
-		g.drawString(toString(), 5, lh + 5);
-		g.drawString(model.toString(), 5, lh * 2 + 5);
-		g.drawString(String.valueOf(model.getFocus()), 5, lh * 3 + 5);
+		g.setColor(Color.lightGray);
+		
+		long fm = Runtime.getRuntime().freeMemory();
+		int delay = ClientMain.getDelay();
+		float fps = 1000f / delay;
+		
+		g.drawString(String.format("Main[delay=%dms fps=%.1f busy=%.0fms free=%.0fms freemem=%.1fMB]",
+				delay, fps, 
+				ClientMain.renderTime / 1000000.0, ClientMain.freeTime / 1000000.0, 
+				fm / 1000000.0), 5, lh + 5);
+		
+		g.drawString(toString(), 5, lh * 2 + 5);
+		g.drawString(model.toString(), 5, lh * 3 + 5);
+		g.drawString(String.valueOf(model.getFocus()), 5, lh * 4 + 5);
 		if (mousePoint != null) {
 			int mx = getModelX() + mousePoint.x;
 			int my = getModelY() + mousePoint.y;
-			g.drawString("Mouse " + mx + ", " + my, 5, lh * 4 + 5);
+			g.drawString("Mouse " + mx + ", " + my, 5, lh * 5 + 5);
 		}
 	}
 	
 	@Override
 	public String toString() {
-		long f = Runtime.getRuntime().freeMemory();
-		if (f > freeMem) {
-			long t = System.nanoTime();
-			gcTimeDelta = (t - gcTime) / 1000000000f;
-			gcTime = t;
-		}
-		freeMem = f;
-		return String.format("View[%d,%d] [fps=%.1f gc=%.1fs]", getWidth(), getHeight(), 1000f / ClientMain.getDelay(), gcTimeDelta);
+		return String.format("View[%d,%d]", getWidth(), getHeight());
 	}
 }

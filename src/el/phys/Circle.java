@@ -19,6 +19,6 @@ public class Circle {
 
 	@Override
 	public String toString() {
-		return String.format("C[%.1f,%.1f r=%.1f]", x, y, r);
+		return String.format("C[%.1f,%.1f,%.1f]", x, y, r);
 	}
 }
