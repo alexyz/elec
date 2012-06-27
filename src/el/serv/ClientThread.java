@@ -6,35 +6,16 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.Socket;
 import java.util.StringTokenizer;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Server connection thread to client.
  * Each client has at most one foreground object identified by id.
  */
-class ClientThread extends Thread {
-	
-	/** tell client new server time (long) */
-	public static final String TIME = "time";
-	/** tell client with id to enter (int) */
-	public static final String ENTER = "enter";
-	/** tell client to spectate (int) */
-	public static final String SPEC = "spectate";
-	/** tell client its identifier (int) */
-	public static final String ID = "id";
-	/** tell client to update the given object (int) (FGObject) */
-	public static final String UPDATEOBJ = "update-obj";
-	/** tell client to discard any existing map and use given map data (MapBgObject) */
-	public static final String MAPDATA = "map-data";
-	/** tell client to update map tile */
-	public static final String MAPTILE = "map-tile";
-	/** tell client to add bullet */
-	public static final String FIRE = "fire";
+public class ClientThread extends Thread {
 	
 	private static final PrintStream out = System.out;
-	private static final AtomicInteger idSequence = new AtomicInteger(1000);
 	
-	/** client identifier */
+	/** client unique identifier */
 	public final int id;
 	private final Socket socket;
 	/** input reader for receiving data from the client */
@@ -46,12 +27,13 @@ class ClientThread extends Thread {
 	public boolean entered;
 	/** last update received from client */
 	public String lastData;
+	public String name;
 	
-	public ClientThread(Socket socket) throws Exception {
-		this.socket = socket;
+	public ClientThread(Socket socket, int id) throws Exception {
 		setDaemon(true);
 		setPriority(Thread.NORM_PRIORITY);
-		this.id = idSequence.getAndIncrement();
+		this.socket = socket;
+		this.id = id;
 		setName("ClientThread-" + id);
 		clientIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 		clientOut = new PrintStream(socket.getOutputStream());
@@ -60,10 +42,20 @@ class ClientThread extends Thread {
 	@Override
 	public void run() {
 		try {
+			// wait for first command from client
+			String line = clientIn.readLine();
+			out.println(this + ": received " + line);
+			
+			if (line.startsWith(ServerCommands.NAME)) {
+				name = line.substring(line.indexOf(" ") + 1);
+			} else {
+				throw new Exception("client did not send name");
+			}
+			
 			// send server state to new client...
 			ServerMain.clientInit(this);
 			
-			String line;
+			// read commands from client...
 			while ((line = clientIn.readLine()) != null) {
 				out.println(this + ": received " + line);
 				StringTokenizer tokens = new StringTokenizer(line);
@@ -71,32 +63,45 @@ class ClientThread extends Thread {
 				
 				// commands from client to server
 				
-				if (cmd.equals(ServerThread.UPDATE)) {
+				if (cmd.equals(ServerCommands.UPDATE)) {
 					ServerMain.clientUpdate(this, line.substring(line.indexOf(" ") + 1));
 					
-				} else if (cmd.equals(ServerThread.FIREREQ)) {
+				} else if (cmd.equals(ServerCommands.FIREREQ)) {
 					ServerMain.clientFireReq(this, line.substring(line.indexOf(" ") + 1));
 					
-				} else if (cmd.equals(ServerThread.ENTERREQ)) {
+				} else if (cmd.equals(ServerCommands.TALKREQ)) {
+					String msg = line.substring(line.indexOf(" ") + 1).trim();
+					if (msg.length() > 0) {
+						ServerMain.clientTalkReq(this, msg);
+					}
+					
+				} else if (cmd.equals(ServerCommands.ENTERREQ)) {
 					ServerMain.clientEnterReq(this);
 					
-				} else if (cmd.equals(ServerThread.SPEC)) {
+				} else if (cmd.equals(ServerCommands.SPEC)) {
 					ServerMain.clientSpec(this);
 					
-				} else if (cmd.equals(ServerThread.MAPTILEREQ)) {
+				} else if (cmd.equals(ServerCommands.MAPTILEREQ)) {
 					int x = Integer.parseInt(tokens.nextToken());
 					int y = Integer.parseInt(tokens.nextToken());
 					int act = Integer.parseInt(tokens.nextToken());
-					ServerMain.clientUpdateMap(this, x, y, act);
+					ServerMain.clientMapTileReq(this, x, y, act);
 					
 				} else {
 					out.println(this + ": unknown command " + line);
 				}
 			}
 			
-		} catch (IOException e) {
+		} catch (Exception e) {
 			out.println(this + ": " + e);
-			ServerMain.removeClient(this);
+			ServerMain.clientExit(this);
+		}
+		
+		// close connection
+		try {
+			socket.close();
+		} catch (Exception e) {
+			e.printStackTrace(out);
 		}
 	}
 	

@@ -5,13 +5,61 @@ import el.phys.*;
 /**
  * Moving circle vs fixed square collision detection
  */
-public class CSIntersect extends Intersect {
+public class CSIntersect {
 	
 	/**
-	 * Return true if moving circle intersects with fixed square.
+	 * rotate point around centre of rectangle
+	 */
+	public static Point rotate(Rect r, float theta, Point p) {
+		float rxo = r.x0 + (r.x1 - r.x0) / 2;
+		float ryo = r.y0 + (r.y1 - r.y0) / 2;
+		float x = p.x - rxo;
+		float y = p.y - ryo;
+		float scale = FloatMath.hypot(x, y);
+		float a = FloatMath.atan2(x, y) + theta;
+		float x2 = FloatMath.sin(a) * scale + rxo;
+		float y2 = FloatMath.cos(a) * scale + ryo;
+		return new Point(x2, y2);
+	}
+	
+	// circle : point, rect : point
+	
+	/**
+	 * find intersection with rotated rectangle
+	 */
+	public static Intersection superintersect(Rect r, float theta, Circle c, float tx, float ty, float bounceFactor) {
+		Point p = new Point(c.x, c.y);
+		Point p2 = rotate(r, theta, p);
+		//System.out.println("c " + p + " rotate " + theta + " is " + p2);
+		Circle c2 = new Circle(p2.x, p2.y, c.r);
+		
+		Point pt = new Point(c.x + tx, c.y + ty);
+		Point pt2 = rotate(r, theta, pt);
+		//System.out.println("ct " + pt + " rotate " + theta + " is " + pt2);
+		
+		float tx2 = pt2.x - p2.x;
+		float ty2 = pt2.y - p2.y;
+		//System.out.println("t " + new Point(tx, ty) + " rotate " + theta + " is " + new Point(tx2, ty2));
+		Intersection i2 = intersect(r, c2, tx2, ty2, bounceFactor);
+		System.out.println("superintersection: " + i2);
+		
+		if (i2 != null) {
+			// this doesn't work
+			
+			Point ip = rotate(r, FloatMath.twopi - theta, new Point(c2.x + i2.itx, c2.y + i2.ity));
+			i2.itx = ip.x - c.x;
+			i2.ity = ip.y - c.y;
+		}
+		
+		return i2;
+	}
+		
+	
+	/**
+	 * Return true if moving circle intersects with fixed orthogonal rectangle.
 	 * Optionally returns first intersection point (from l1 to l2).
 	 */
-	public static Intersection intersect_(Rect r, Circle c, float tx, float ty, float bf) {
+	public static Intersection intersect(Rect r, Circle c, float tx, float ty, float bounceFactor) {
 		
 		// subtract radius of circle from square to make it a point
 		float rx0 = r.x0 - c.r;
@@ -71,10 +119,10 @@ public class CSIntersect extends Intersect {
 		float p, vx;
 		if (pxl > pyl) {
 			p = pxl;
-			vx = -bf;
+			vx = -bounceFactor;
 		} else {
 			p = pyl;
-			vx = bf;
+			vx = bounceFactor;
 		}
 
 		if (p < 0f || p > 1f) {
@@ -98,18 +146,13 @@ public class CSIntersect extends Intersect {
 		in.vy = -vx;
 		
 		// p after reflection, if required
-		if (bf > 0) {
+		if (bounceFactor > 0) {
 			float pp = (1f - p);
 			in.rtx = in.itx + (in.vx * tx * pp);
 			in.rty = in.ity + (in.vy * ty * pp);
 		}
 
 		return in;
-	}
-	
-	@Override
-	public Intersection intersect(Rect r, Circle c, float tx, float ty, float bounce) {
-		return intersect_(r, c, tx, ty, bounce);
 	}
 	
 }

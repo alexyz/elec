@@ -23,18 +23,30 @@ import el.bg.MapBgObject;
  */
 public class ServerMain {
 	
+	//
+	// final fields
+	//
+	
 	private static final PrintStream out = System.out;
 	/**
 	 * list of connected clients. any reads or writes to this list should be synchronized
 	 */
 	private static final List<ClientThread> clients = new ArrayList<ClientThread>();
-	
+	/**
+	 * Current map state
+	 */
 	private static final MapBgObject map = new MapBgObject();
+	
+	//
+	// mutable fields
+	//
+	
+	private static int nextClientId = 1000;
 	
 	private static long startTime;
 
 	public static void main(String[] args) throws Exception {
-		map.basic();
+		map.init();
 		startTime = System.nanoTime();
 		ServerSocket serverSocket = new ServerSocket(8111);
 		
@@ -43,8 +55,10 @@ public class ServerMain {
 			Socket socket = serverSocket.accept();
 			out.println("accepted " + socket);
 			socket.setKeepAlive(true);
+			//TODO
+			//socket.setSoTimeout(5000);
 			//out.println("  keepalive: " + socket.getKeepAlive() + " nodelay: " + socket.getTcpNoDelay() + " timeout: " + socket.getSoTimeout());
-			ClientThread client = new ClientThread(socket);
+			ClientThread client = new ClientThread(socket, nextClientId++);
 			client.start();
 			synchronized (clients) {
 				out.println("adding " + client);
@@ -57,13 +71,13 @@ public class ServerMain {
 		// allow client to enter game
 		// tell all clients
 		client.entered = true;
-		sendAll(ClientThread.ENTER, client.id);
+		sendAll(ClientCommands.ENTER, client.id);
 	}
 	
 	/** tell all clients the client has begun spectating */
 	public static void clientSpec(ClientThread client) {
 		client.entered = false;
-		sendAll(ClientThread.SPEC, client.id);
+		sendAll(ClientCommands.SPEC, client.id);
 	}
 	
 	/** update the state of the client object on the other clients */
@@ -72,7 +86,7 @@ public class ServerMain {
 		synchronized (clients) {
 			for (ClientThread c : clients) {
 				if (c != client) {
-					c.send(ClientThread.UPDATEOBJ , client.id, data);
+					c.send(ClientCommands.UPDATEOBJ , client.id, data);
 				}
 			}
 		}
@@ -80,40 +94,50 @@ public class ServerMain {
 	
 	/** send current state of server to new client */
 	public static void clientInit(ClientThread client) {
-		client.send(ClientThread.ID, client.id);
-		client.send(ClientThread.TIME, time());
+		client.send(ClientCommands.ID, client.id);
+		client.send(ClientCommands.TIME, time());
 		
 		// send map
-		client.send(ClientThread.MAPDATA, map.write(new StringBuilder()));
+		client.send(ClientCommands.MAPDATA, map.write(new StringBuilder()));
 		
 		synchronized (clients) {
 			for (ClientThread c : clients) {
-				if (c != client && c.entered && c.lastData != null) {
-					client.send(ClientThread.ENTER, c.id);
-					// FIXME last data might be very old, really need to just force all clients to send update
-					// could do that with a new connect command
-					client.send(ClientThread.UPDATEOBJ, c.id, c.lastData);
+				if (c != client) {
+					// introduce clients to each other
+					c.send(ClientCommands.CONNECTED, client.id, client.name);
+					client.send(ClientCommands.CONNECTED, c.id, c.name);
+					
+					if (c.entered) {
+						client.send(ClientCommands.ENTER, c.id);
+					}
 				}
 			}
 		}
+		
 	}
 	
 	/** tell client to update map tile */
-	public static void clientUpdateMap(ClientThread client, int x, int y, int act) {
+	public static void clientMapTileReq(ClientThread client, int x, int y, int act) {
 		map.place(x, y, act);
-		sendAll(ClientThread.MAPTILE, x, y, act);
+		sendAll(ClientCommands.MAPTILE, x, y, act);
 	}
 	
+	/**
+	 * consider fire request and send to clients
+	 */
 	public static void clientFireReq(ClientThread client, String data) {
 		synchronized (clients) {
 			for (ClientThread c : clients) {
 				if (c != client) {
-					c.send(ClientThread.FIRE, data);
+					c.send(ClientCommands.FIRE, data);
 				}
 			}
 		}
 	}
 	
+	/**
+	 * get current server time
+	 */
 	private static long time() {
 		return System.nanoTime() - startTime;
 	}
@@ -128,12 +152,19 @@ public class ServerMain {
 	}
 
 	/** remove client after disconnection */
-	public static void removeClient(ClientThread client) {
+	public static void clientExit(ClientThread client) {
 		synchronized (clients) {
 			out.println("removing " + client);
 			clients.remove(client);
-			sendAll(ClientThread.SPEC, client.id);
+			sendAll(ClientCommands.EXIT, client.id);
 		}
+	}
+
+	/**
+	 * consider talk request and send to clients
+	 */
+	public static void clientTalkReq(ClientThread client, String str) {
+		sendAll(ClientCommands.TALK, client.id, str);
 	}
 	
 	

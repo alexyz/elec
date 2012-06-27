@@ -7,9 +7,9 @@ import java.util.StringTokenizer;
 
 import el.ClientMain;
 import el.phys.Circle;
-import el.phys.Intersect;
 import el.phys.Intersection;
 import el.phys.Rect;
+import el.phys.cs.CSIntersect;
 
 /**
  * A map tile with useful methods
@@ -55,7 +55,7 @@ public class Tile extends Rect {
 		g.drawImage(image, sx, sy, null);
 	}
 	
-	public Intersection intersects(Intersect i, Circle c, float tx, float ty) {
-		return i.intersect(this, c, tx, ty, 0.75f);
+	public Intersection intersects(Circle c, float tx, float ty) {
+		return CSIntersect.intersect(this, c, tx, ty, 0.75f);
 	}
 }

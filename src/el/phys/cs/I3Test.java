@@ -14,14 +14,13 @@ import javax.swing.JFrame;
 
 import el.phys.Circle;
 import el.phys.Intersection;
+import el.phys.Point;
 import el.phys.Rect;
 
 /**
  * Separate program to test the intersection function
  */
 class I3Test extends JComponent implements MouseWheelListener, MouseListener, MouseMotionListener {
-	
-	static float _x0, _y0, _x1, _y1, _x2, _y2, _x3, _y3;
 	
 	public static void main(String[] args) {
 		
@@ -36,9 +35,12 @@ class I3Test extends JComponent implements MouseWheelListener, MouseListener, Mo
 	int sx1 = 150, sy1 = 150, sx2 = 350, sy2 = 350;
 	int lx1 = 50, ly1 = 50, lx2 = 100, ly2 = 100;
 	int mx = 0, my = 0;
-	int rad = 50;
+	int rad = 25;
 	float bounce = 1f;
-	Intersection i;
+	float theta = -0.1f;
+	Intersection i, i2;
+	Point p, p2;
+	int b;
 	
 	public I3Test() {
 		setPreferredSize(new Dimension(640,480));
@@ -49,12 +51,14 @@ class I3Test extends JComponent implements MouseWheelListener, MouseListener, Mo
 	
 	@Override
 	public void mousePressed(java.awt.event.MouseEvent e) {
+		System.out.println("pressed " + e.getButton());
+		b = e.getButton();
 		int x = e.getPoint().x;
 		int y = e.getPoint().y;
-		if (e.getButton() == MouseEvent.BUTTON1) {
+		if (b == MouseEvent.BUTTON1) {
 			lx1 = x;
 			ly1 = y;
-		} else {
+		} else if (b == MouseEvent.BUTTON3) {
 			sx1 = x;
 			sy1 = y;
 		}
@@ -66,10 +70,10 @@ class I3Test extends JComponent implements MouseWheelListener, MouseListener, Mo
 		mx = e.getX();
 		my = e.getY();
 		
-		if (e.getButton() == MouseEvent.BUTTON1) {
+		if (b == MouseEvent.BUTTON1) {
 			lx2 = mx;
 			ly2 = my;
-		} else {
+		} else if (b == MouseEvent.BUTTON3) {
 			sx2 = mx;
 			sy2 = my;
 		}
@@ -93,6 +97,8 @@ class I3Test extends JComponent implements MouseWheelListener, MouseListener, Mo
 	public void mouseWheelMoved(MouseWheelEvent e) {
 		if (e.isShiftDown()) {
 			bounce += (e.getWheelRotation() / 128f);
+		} else if (e.isControlDown()) {
+			theta += (e.getWheelRotation() / 10f);
 		} else {
 			rad += e.getWheelRotation();
 		}
@@ -120,14 +126,17 @@ class I3Test extends JComponent implements MouseWheelListener, MouseListener, Mo
 		float ty = ly2 - ly1;
 		Rect r = new Rect(sx1, sy1, sx2, sy2);
 		Circle c = new Circle(lx1, ly1, rad);
-		i = CSIntersect.intersect_(r, c, tx, ty, bounce); 
+		p = CSIntersect.rotate(r, theta, new Point(c.x, c.y));
+		p2 = CSIntersect.rotate(r, theta, new Point(c.x + tx, c.y + ty));
+		i = CSIntersect.intersect(r, c, tx, ty, bounce);
+		i2 = CSIntersect.superintersect(r, theta, c, tx, ty, bounce);
 	}
 	
 	@Override
 	public void paint(Graphics g) {
 		Graphics2D g2 = (Graphics2D) g;
 		
-		g.setColor(Color.yellow);
+		g.setColor(Color.magenta);
 		g.drawRect(sx1 - rad, sy1 - rad, sx2 - sx1 + rad * 2, sy2 - sy1 + rad * 2);
 		g.drawOval(sx1 - rad, sy1 - rad, rad * 2, rad * 2);
 		g.drawOval(sx2 - rad, sy1 - rad, rad * 2, rad * 2);
@@ -137,16 +146,35 @@ class I3Test extends JComponent implements MouseWheelListener, MouseListener, Mo
 		g.setColor(Color.black);
 		g.drawString(mx + ", " + my, 20, 20);
 		g.drawString("bounce " + bounce, 20, 40);
+		g.drawString("theta " + theta, 20, 60);
+		g.drawString("radius " + rad, 20, 80);
 		g.drawRect(sx1, sy1, sx2 - sx1, sy2 - sy1);
 		g.drawLine(lx1, ly1, lx2, ly2);
 		g2.drawOval(lx1 - rad, ly1 - rad, rad * 2, rad * 2);
 		g.drawString(" r", sx1, sy1);
 		g.drawString(" c", lx1, ly1);
 		
-		g2.drawString(".l", _x0, _y0);
-		g2.drawString(".r", _x1, _y1);
-		g2.drawString(".t", _x2, _y2);
-		g2.drawString(".b", _x3, _y3);
+		if (theta != 0) {
+			Rect r = new Rect(sx1, sy1, sx2, sy2);
+			Point TL = CSIntersect.rotate(r, theta, new Point(r.x0, r.y0));
+			Point TR = CSIntersect.rotate(r, theta, new Point(r.x1, r.y0));
+			Point BL = CSIntersect.rotate(r, theta, new Point(r.x0, r.y1));
+			Point BR = CSIntersect.rotate(r, theta, new Point(r.x1, r.y1));
+			g2.setColor(Color.green);
+			g2.drawLine((int) TL.x, (int) TL.y, (int) TR.x, (int) TR.y);
+			g2.drawLine((int) TR.x, (int) TR.y, (int) BR.x, (int) BR.y);
+			g2.drawLine((int) BR.x, (int) BR.y, (int) BL.x, (int) BL.y);
+			g2.drawLine((int) BL.x, (int) BL.y, (int) TL.x, (int) TL.y);
+		}
+		
+		if (theta != 0 && p != null) {
+			g2.setColor(Color.green);
+			g2.drawOval((int) (p.x - rad), (int) (p.y - rad), rad * 2, rad * 2);
+			
+			if (p2 != null) {
+				g.drawLine((int) p.x, (int) p.y, (int) p2.x, (int) p2.y);
+			}
+		}
 		
 		if (i != null) {
 			g2.setColor(Color.red);
@@ -159,6 +187,19 @@ class I3Test extends JComponent implements MouseWheelListener, MouseListener, Mo
 			int ry = (int) (ly1 + i.rty);
 			g2.drawString(".p", rx, ry);
 			g2.drawOval(rx - rad, ry - rad, rad * 2, rad * 2);
+		}
+		
+		if (i2 != null) {
+			g2.setColor(Color.green);
+			int px = (int) (lx1 + i2.itx);
+			int py = (int) (ly1 + i2.ity);
+			g2.drawOval(px - rad, py - rad, rad * 2, rad * 2);
+			/*
+			g2.setColor(Color.green);
+			int rx = (int) (lx1 + i2.rtx);
+			int ry = (int) (ly1 + i2.rty);
+			g2.drawOval(rx - rad, ry - rad, rad * 2, rad * 2);
+			*/
 		}
 	}
 	

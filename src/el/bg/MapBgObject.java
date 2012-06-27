@@ -2,12 +2,9 @@ package el.bg;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.Rectangle;
 import java.util.*;
 
-import el.fg.FgObject;
 import el.phys.Circle;
-import el.phys.Intersect;
 import el.phys.Intersection;
 
 /**
@@ -20,14 +17,18 @@ public class MapBgObject extends BgObject {
 	// load and save
 	// place and delete
 	
-	// TODO use a map
+	// TODO use a map of 10k*10k sectors of 100*100 pixels
+	// where key is xq + (yq << 16)
 	private final ArrayList<Tile> tiles = new ArrayList<Tile>();
 	
 	public MapBgObject() {
 		//
 	}
 	
-	public void basic() {
+	/**
+	 * Create a random map
+	 */
+	public void init() {
 		tiles.add(new Tile(500000 - 64, 500000 + 128));
 		tiles.add(new Tile(500000 + 64, 500000 + 128));
 	}
@@ -75,7 +76,7 @@ public class MapBgObject extends BgObject {
 	}
 	
 	@Override
-	public Intersection intersects(Intersect i, Circle c, float tx, float ty) {
+	public Intersection intersects(Circle c, float tx, float ty) {
 		// need to know if line intersects with any tile
 		// println("checking map intersect with %f,%f -> %f,%f", lx1, ly1, lx2,
 		// ly2);
@@ -85,7 +86,7 @@ public class MapBgObject extends BgObject {
 		
 		Intersection r;
 		for (Tile t : tiles)
-			if ((r = t.intersects(i, c, tx, ty)) != null)
+			if ((r = t.intersects(c, tx, ty)) != null)
 				return r;
 		return null;
 	}

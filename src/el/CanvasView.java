@@ -11,7 +11,8 @@ import el.fg.Ship;
 import java.util.List;
 
 /**
- * Exactly the same as JCView except uses canvas instead of JComponent
+ * Renders the model.
+ * Has virtually no state of it's own
  */
 class CanvasView extends Canvas {
 	
@@ -20,6 +21,7 @@ class CanvasView extends Canvas {
 	//
 	
 	private final Model model;
+	private final ViewKeyListener keyl;
 	
 	//
 	// mutable fields
@@ -33,7 +35,8 @@ class CanvasView extends Canvas {
 		setFocusTraversalKeysEnabled(false);
 		setMinimumSize(new Dimension(640, 480));
 		setPreferredSize(getMinimumSize());
-		addKeyListener(new ViewKeyListener(model));
+		this.keyl = new ViewKeyListener(model);
+		addKeyListener(keyl);
 		MouseAdapter l = new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
@@ -111,6 +114,34 @@ class CanvasView extends Canvas {
 		paintfg(g, model.getTransFgObjects());
 		
 		paintStatus(g);
+		
+		paintBuffer(g);
+	}
+	
+	/**
+	 * paint the keyboard buffer and the messages to the screen
+	 */
+	private void paintBuffer(Graphics2D g) {
+		int h = g.getFontMetrics().getHeight();
+		int y = getHeight() - h;
+		if (keyl.buf.length() > 0) {
+			// totally arbitatary guess to get box to go around string
+			g.drawRect(5, y - h + 2, getWidth() - 10, h);
+			g.drawString(keyl.buf.toString(), 10, y);
+			y -= h;
+		}
+		List<Msg> msgs = model.getMsgs();
+		for (int n = 0, m = msgs.size() - 1; n < 5 && m >= 0; n++, m--) {
+			Msg msg = msgs.get(m);
+			if (msg.sender != null) {
+				g.setColor(Color.yellow);
+				g.drawString(msg.sender + " > " + msg.msg, 10, y);
+			} else {
+				g.setColor(Color.white);
+				g.drawString(msg.msg, 10, y);
+			}
+			y -= h;
+		}
 	}
 	
 	/**
@@ -152,15 +183,16 @@ class CanvasView extends Canvas {
 		int lh = g.getFontMetrics().getHeight();
 		g.setColor(Color.lightGray);
 		
+		/*
 		long fm = Runtime.getRuntime().freeMemory();
 		int delay = ClientMain.getDelay();
 		float fps = 1000f / delay;
 		
-		g.drawString(String.format("Main[delay=%dms fps=%.1f busy=%.0fms free=%.0fms freemem=%.1fMB]",
+		g.drawString(String.format("Main[delay=%dms fps=%.1f busy=%.0fms wait=%.0fms freemem=%.0fMB]",
 				delay, fps, 
 				ClientMain.renderTime / 1000000.0, ClientMain.freeTime / 1000000.0, 
 				fm / 1000000.0), 5, lh + 5);
-		
+		*/
 		g.drawString(toString(), 5, lh * 2 + 5);
 		g.drawString(model.toString(), 5, lh * 3 + 5);
 		g.drawString(String.valueOf(model.getFocus()), 5, lh * 4 + 5);
@@ -175,4 +207,6 @@ class CanvasView extends Canvas {
 	public String toString() {
 		return String.format("View[%d,%d]", getWidth(), getHeight());
 	}
+	
 }
+

@@ -11,6 +11,7 @@ public class FloatMath {
 	public static final float pi = (float) Math.PI;
 	public static final float twopi = (float) (Math.PI * 2.0);
 	public static final float halfpi = (float) (Math.PI / 2.0);
+	public static final float quarterpi = (float) (Math.PI / 4.0);
 	
 	/**
 	 * float sine

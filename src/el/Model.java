@@ -1,11 +1,9 @@
+
 package el;
 
-import java.io.PrintStream;
 import java.util.*;
 
 import el.phys.*;
-import el.phys.cs.CSIntersect;
-import el.serv.ServerThread;
 import el.bg.*;
 import el.fg.*;
 
@@ -30,8 +28,6 @@ public class Model {
 
 	/** centre co-ordinates */
 	public static final int centrex = 500000, centrey = 500000;
-	
-	private static final PrintStream out = System.out;
 	
 	//
 	// final fields
@@ -58,10 +54,10 @@ public class Model {
 	 */
 	private final StarBgObject stars = new StarBgObject();
 	private final List<BgObject> bgObjects = Arrays.asList(stars, map);
-	/**
-	 * Collision detection function
-	 */
-	private final Intersect i = new CSIntersect();
+	/** talk messages from server */
+	private final ArrayList<Msg> msgs = new ArrayList<Msg>();
+	/** known players */
+	private final Map<Integer,String> players = new TreeMap<Integer,String>();
 	
 	//
 	// mutable fields
@@ -76,7 +72,7 @@ public class Model {
 	 */
 	private float lastUpdate;
 	/**
-	 * Issue a server update on next call to update()
+	 * Issue a focused object server update on next call to update()
 	 */
 	private boolean forceUpdate;
 	/**
@@ -86,30 +82,75 @@ public class Model {
 	/**
 	 * the server, if any
 	 */
-	private ServerThread server;
+	private ServerRunnable server;
 	/**
-	 * users ship id, if any
+	 * users id, also used for ship
 	 */
-	private int selfId;
+	private int id;
 	
 	public Model() {
 		//
 	}
 	
+	public void setId(int id, String name) {
+		this.id = id;
+		players.put(id, name);
+	}
+	
 	public int getId() {
-		return selfId;
+		return id;
+	}
+	
+	public void sendMsg(String msg) {
+		if (server != null) {
+			server.sendTalkReq(msg);
+		} else {
+			msgs.add(new Msg(0, "(self)", msg));
+		}
+	}
+	
+	public List<Msg> getMsgs() {
+		return msgs;
+	}
+	
+	public Map<Integer,String> getPlayers() {
+		return players;
 	}
 	
 	/**
-	 * enter the user into the game
+	 * player has connected
+	 */
+	public void addPlayer(int id, String name) {
+		// TODO add to player list
+		players.put(id, name);
+		forceUpdate = true;
+		msgs.add(new Msg(0, null, name + " connected"));
+		// for benefit of client that has just entered
+		forceUpdate = true;
+	}
+	
+	/**
+	 * player has disconnected
+	 */
+	public void removePlayer(int id) {
+		spec(id);
+		String name = players.remove(id);
+		msgs.add(new Msg(0, null, name + " disconnected"));
+	}
+	
+	/**
+	 * enter someone, possibly user into the game
 	 */
 	public void enter(int id) {
-		Ship ship = new Ship(ShipType.types[0], centrex - 20, centrey);
-		this.selfId = id;
-		focusObj = ship;
-		// TODO need to put focused object on top
+		Ship ship = new Ship(ShipType.types[0], centrex, centrey);
+		if (this.id == id) {
+			// TODO need to put focused object on top
+			focusObj = ship;
+			forceUpdate = true;
+		}
 		addFgObject(ship, id);
-		forceUpdate = true;
+		String name = players.get(id);
+		msgs.add(new Msg(0, null, name + " entered"));
 	}
 	
 	/**
@@ -125,12 +166,13 @@ public class Model {
 		}
 		if (focusObj != null && focusObj.getId() == id) {
 			focusObj = modelObj;
-			this.selfId = 0;
 		}
+		String name = players.get(id);
+		msgs.add(new Msg(0, null, name + " spectates"));
 	}
 	
 	/**
-	 * focus next foreground object. in live game you should only be able to
+	 * focus next foreground object. while entered you should only be able to
 	 * focus one (your ship).
 	 */
 	void focusCycle() {
@@ -150,7 +192,6 @@ public class Model {
 	public void update() {
 		
 		float floatTime, floatTimeDelta;
-		
 		if (server != null) {
 			floatTime = server.getTime() / NS_IN_S;
 			floatTimeDelta = floatTime - this.updateTime;
@@ -162,9 +203,8 @@ public class Model {
 		
 		this.updateTime = floatTime;
 		
-		
 		// apply actions for focused object
-		if (actions.size() > 0 && (focusObj == modelObj || focusObj.getId() == selfId)) {
+		if (actions.size() > 0 && (focusObj == modelObj || focusObj.getId() == id)) {
 			// FIXME don't apply actions unless it's players own ship
 			for (FgRunnable r : actions) {
 				r.run(focusObj);
@@ -181,7 +221,7 @@ public class Model {
 		// send to server - after possible reflect
 		if (server != null && focusObj instanceof Ship && forceUpdate) {
 			// update focused ship on server
-			server.update((Ship) focusObj);
+			server.sendUpdate((Ship) focusObj);
 			lastUpdate = floatTime;
 			forceUpdate = false;
 		}
@@ -260,8 +300,6 @@ public class Model {
 	public void addFgObject(FgObject obj, int id) {
 		obj.setModel(this, id);
 		objects.add(obj);
-		// for benefit of client that has just entered
-		forceUpdate = true;
 	}
 	
 	/** update the state of the given object, called by server */
@@ -280,17 +318,13 @@ public class Model {
 		obj.setModel(this, -1);
 		transObjects.add(0, obj); 
 		if (send && server != null && obj instanceof Bullet) {
-			server.fireReq((Bullet)obj);
+			server.sendFire((Bullet)obj);
 		}
-	}
-	
-	public Intersect getIntersect() {
-		return i;
 	}
 	
 	public Intersection intersectbg(FgObject obj, float tx, float ty) {
 		// check collision with map
-		Intersection r = map.intersects(i, obj.getPosition(), tx, ty);
+		Intersection r = map.intersects(obj.getPosition(), tx, ty);
 		if (r != null && obj == focusObj) {
 			forceUpdate = true;
 		}
@@ -305,7 +339,7 @@ public class Model {
 		return null;
 	}
 	
-	public void setServer(ServerThread server) {
+	public void setServer(ServerRunnable server) {
 		this.server = server;
 		// should probably clear here
 	}
@@ -316,7 +350,7 @@ public class Model {
 	
 	public void updateMap(int x, int y, int action) {
 		if (server != null) {
-			server.updateMapReq(x, y, action);
+			server.sendMapTileReq(x, y, action);
 		} else {
 			map.place(x, y, action);
 		}
@@ -329,7 +363,7 @@ public class Model {
 			serverTime = server.getTime() / NS_IN_S;
 		}
 		return String.format("Model[id=%d pos=%s objs=%d,%d t=%.1f st=%.1f %s]", 
-				selfId,
+				id,
 				focusObj.getPosition(),
 				objects.size(), transObjects.size(), 
 				updateTime, 

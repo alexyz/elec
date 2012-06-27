@@ -52,6 +52,8 @@ abstract class MovingFgObject extends FgObject  {
 	 */
 	protected int hit;
 	
+	protected int freq;
+	
 	/**
 	 * Create object with given location and radius
 	 */

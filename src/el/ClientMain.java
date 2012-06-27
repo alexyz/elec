@@ -15,7 +15,6 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
-import el.serv.ServerThread;
 
 public class ClientMain {
 	
@@ -31,7 +30,7 @@ public class ClientMain {
 	
 	private static JFrame frame;
 	private static Timer timer;
-	private static ServerThread server;
+	private static ServerRunnable server;
 	private static long endTime;
 
 	public static void main(String[] args) {
@@ -83,6 +82,7 @@ public class ClientMain {
 				freeTime = startt - endTime;
 				
 				// don't allow network updates when updating and painting
+				// TODO - change ServerRunnable so it posts AWT events rather than use sync
 				synchronized (model) {
 					model.update();
 					// should skip this if behind
@@ -104,12 +104,24 @@ public class ClientMain {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
+					String name = JOptionPane.showInputDialog(frame, "Enter name");
 					Socket socket = new Socket("localhost", 8111);
-					ServerThread server = new ServerThread(socket, model);
-					server.start();
+					ServerRunnable server = new ServerRunnable(socket, model, name);
+					
+					// should create new model and view at this point
 					model.setServer(server);
 					ClientMain.server = server;
+					frame.setTitle("Electron - " + name);
+					
+					// start - sends name and starts listening
+					Thread t = new Thread(server, "ServerThread");
+					t.setDaemon(true);
+					t.setPriority(Thread.NORM_PRIORITY);
+					t.start();
+					
+					// focus playing area
 					out.println("view request focus: " + view.requestFocusInWindow());
+					
 				} catch (Exception e1) {
 					e1.printStackTrace();
 				}
@@ -121,7 +133,7 @@ public class ClientMain {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (server != null) {
-					server.enterReq();
+					server.sendEnterReq();
 				} else {
 					JOptionPane.showMessageDialog(frame, "Not connected");
 				}
@@ -135,7 +147,7 @@ public class ClientMain {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (server != null) {
-					server.spec();
+					server.sendSpec();
 					// wait for server?
 					//model.spec();
 				} else {
@@ -148,7 +160,8 @@ public class ClientMain {
 		enterMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				model.enter(-1);
+				model.setId(0, "self");
+				model.enter(model.getId());
 				out.println("view request focus: " + view.requestFocusInWindow());
 			}
 		});

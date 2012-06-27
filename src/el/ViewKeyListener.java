@@ -3,7 +3,12 @@ package el;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
+/**
+ * view keyboard listener and message buffer
+ */
 class ViewKeyListener implements KeyListener {
+	
+	public final StringBuilder buf = new StringBuilder();
 	
 	private final Model model;
 	
@@ -12,9 +17,10 @@ class ViewKeyListener implements KeyListener {
 	}
 	
 	@Override
-	public void keyTyped(java.awt.event.KeyEvent e) {
+	public void keyTyped(KeyEvent e) {
 		//System.out.println("typed '" + e.getKeyChar() + "'");
-		switch (e.getKeyChar()) {
+		char c = e.getKeyChar();
+		switch (c) {
 			case '¤':
 			case '`':
 				model.focusCycle();
@@ -25,7 +31,23 @@ class ViewKeyListener implements KeyListener {
 			case ']':
 				ClientMain.faster();
 				break;
+			case '\b':
+				if (buf.length() > 0) {
+					buf.delete(buf.length() - 1, buf.length());
+				}
+				break;
+			case '\n':
+			case '\r':
+				if (buf.length() > 0) {
+					model.sendMsg(buf.toString());
+					buf.delete(0, buf.length());
+				}
+				break;
 			default:
+				if (c >= 32) {
+					buf.append(c);
+				}
+				break;
 				// System.out.printf("typed '%c' -> %d\n", e.getKeyChar(),
 				// e.getKeyCode());
 		}
@@ -60,7 +82,7 @@ class ViewKeyListener implements KeyListener {
 				model.action(ActionMap.FIRE3);
 				break;
 			default:
-				System.out.printf("pressed '%c' -> %d\n", e.getKeyChar(), e.getKeyCode());
+				//System.out.printf("pressed '%c' -> %d\n", e.getKeyChar(), e.getKeyCode());
 		}
 	}
 	
@@ -98,4 +120,5 @@ class ViewKeyListener implements KeyListener {
 				// e.getKeyCode());
 		}
 	}
+	
 }
