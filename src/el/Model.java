@@ -8,17 +8,17 @@ import el.bg.*;
 import el.fg.*;
 
 /** 
- * Client model.
+ * <p>Client model.
  * Play area is 1M pixels squared. Co-ordinates are represented by floats, 
  * so any more than 1M would start to lose precision.
  * 
- * By convention, variables starting with:
- * sx, sy or vx, vy - screen co-ordinates
- * mx, my - model co-ordinates
- * qx, qy - model quadrant co-ordinates (for some quadrant size)
- * dx, dy - deltas in px/sec
+ * <p>By convention, variables starting with:
+ * <br>sx, sy or vx, vy - screen co-ordinates
+ * <br>mx, my - model co-ordinates
+ * <br>qx, qy - model quadrant co-ordinates (for some quadrant size)
+ * <br>dx, dy - deltas in px/sec
  * 
- * This class is not thread safe. Concurrent access must be externally synchronized
+ * <p>This class is not thread safe. Concurrent access must be externally synchronized
  * (i.e. from AWT event thread and ServerThread instance).
  */
 public class Model {
@@ -41,6 +41,7 @@ public class Model {
 	 * transient foreground objects (bullets)
 	 */
 	private final ArrayList<TransMovingFgObject> transObjects = new ArrayList<TransMovingFgObject>();
+	private final QuadMap<TransMovingFgObject> transMap = new QuadMap<TransMovingFgObject>();
 	private final ActionMap actionMap = new ActionMap();
 	private final ArrayList<FgRunnable> actions = new ArrayList<FgRunnable>();
 	private final ModelObject modelObj = new ModelObject();
@@ -121,7 +122,6 @@ public class Model {
 	 * player has connected
 	 */
 	public void addPlayer(int id, String name) {
-		// TODO add to player list
 		players.put(id, name);
 		forceUpdate = true;
 		msgs.add(new Msg(0, null, name + " connected"));
@@ -141,8 +141,9 @@ public class Model {
 	/**
 	 * enter someone, possibly user into the game
 	 */
-	public void enter(int id) {
+	public void enter(int id, int freq) {
 		Ship ship = new Ship(ShipType.types[0], centrex, centrey);
+		ship.setFreq(freq);
 		if (this.id == id) {
 			// TODO need to put focused object on top
 			focusObj = ship;
@@ -150,7 +151,7 @@ public class Model {
 		}
 		addFgObject(ship, id);
 		String name = players.get(id);
-		msgs.add(new Msg(0, null, name + " entered"));
+		msgs.add(new Msg(0, null, name + " entered on freq " + freq));
 	}
 	
 	/**
@@ -205,12 +206,29 @@ public class Model {
 		
 		// apply actions for focused object
 		if (actions.size() > 0 && (focusObj == modelObj || focusObj.getId() == id)) {
-			// FIXME don't apply actions unless it's players own ship
 			for (FgRunnable r : actions) {
 				r.run(focusObj);
 			}
 			if ((floatTime - lastUpdate) > 0.125) {
 				forceUpdate = true;
+			}
+		}
+		
+		if (transObjects.size() > 0) {
+			Iterator<TransMovingFgObject> i = transObjects.iterator();
+			while (i.hasNext()) {
+				TransMovingFgObject o = i.next();
+				int oldx = o.getX(), oldy = o.getY();
+				o.update(floatTime, floatTimeDelta);
+				if (o instanceof Bullet) {
+					transMap.update(o, oldx, oldy);
+				}
+				if (o.isRemove()) {
+					i.remove();
+					if (o instanceof Bullet) {
+						transMap.remove(o);
+					}
+				}
 			}
 		}
 
@@ -226,17 +244,6 @@ public class Model {
 			forceUpdate = false;
 		}
 		
-		if (transObjects.size() > 0) {
-			Iterator<TransMovingFgObject> i = transObjects.iterator();
-			while (i.hasNext()) {
-				TransMovingFgObject o = i.next();
-				// may inflict damage to objects
-				o.update(floatTime, floatTimeDelta);
-				if (o.remove()) {
-					i.remove();
-				}
-			}
-		}
 		
 	}
 	
@@ -314,15 +321,21 @@ public class Model {
 		System.out.println("could not find object " + id);
 	}
 	
+	/**
+	 * Add a transient object, optionally sending to server
+	 */
 	public void addTransObject(TransMovingFgObject obj, boolean send) {
 		obj.setModel(this, -1);
-		transObjects.add(0, obj); 
+		transObjects.add(0, obj);
+		if (obj instanceof Bullet) {
+			transMap.add(obj);
+		}
 		if (send && server != null && obj instanceof Bullet) {
 			server.sendFire((Bullet)obj);
 		}
 	}
 	
-	public Intersection intersectbg(FgObject obj, float tx, float ty) {
+	public Intersection backgroundCollision(FgObject obj, float tx, float ty) {
 		// check collision with map
 		Intersection r = map.intersects(obj.getPosition(), tx, ty);
 		if (r != null && obj == focusObj) {
@@ -331,28 +344,32 @@ public class Model {
 		return r;
 	}
 	
-	public Intersection intersectfg(Circle c, float tx, float ty, float dam) {
-		// FIXME do this
-		
-		// check collision with ships
-		
-		return null;
+	public void foregroundCollision(Ship ship) {
+		ArrayList<TransMovingFgObject> l = transMap.get(ship);
+		if (l != null) {
+			for (TransMovingFgObject obj : l) {
+				if (obj.getFreq() != ship.getFreq()) {
+					// FIXME set remove, do something interesting
+					System.out.println("impact!!");
+				}
+			}
+		}
 	}
 	
 	public void setServer(ServerRunnable server) {
+		// TODO should probably clear here, or pass in constructor
 		this.server = server;
-		// should probably clear here
 	}
 	
 	public MapBgObject getMap() {
 		return map;
 	}
 	
-	public void updateMap(int x, int y, int action) {
+	public void updateMapTile(int x, int y, int action) {
 		if (server != null) {
 			server.sendMapTileReq(x, y, action);
 		} else {
-			map.place(x, y, action);
+			map.updateMapTile(x, y, action);
 		}
 	}
 	

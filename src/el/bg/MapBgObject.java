@@ -91,7 +91,7 @@ public class MapBgObject extends BgObject {
 		return null;
 	}
 	
-	public void place(int mx, int my, int action) {
+	public void updateMapTile(int mx, int my, int action) {
 		System.out.println(String.format("place/remove map tile at %d,%d", mx, my));
 		Iterator<Tile> i = tiles.iterator();
 		while (i.hasNext()) {

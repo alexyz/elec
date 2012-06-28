@@ -5,13 +5,15 @@ import java.awt.geom.AffineTransform;
 import java.util.StringTokenizer;
 
 import el.phys.Circle;
+import el.phys.QuadMap;
 import el.Model;
 import el.phys.Intersection;
 
 /**
  * Object with a position, can paint and update and receive input if it has the focus
+ * TODO should probably merge this with MovingFgObject
  */
-public abstract class FgObject {
+public abstract class FgObject implements QuadMap.XYR {
 	
 	/**
 	 * Location of object
@@ -71,6 +73,11 @@ public abstract class FgObject {
 	 */
 	public final int getY() {
 		return (int) (c.y + 0.5f);
+	}
+	
+	// FIXME
+	public int getR() {
+		return getRadius();
 	}
 	
 	/**

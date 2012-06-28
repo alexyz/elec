@@ -60,6 +60,12 @@ public class Ship extends MovingFgObject {
 	}
 	
 	@Override
+	public void update(float floatTime, float floatTimeDelta) {
+		super.update(floatTime, floatTimeDelta);
+		model.foregroundCollision(this);
+	}
+	
+	@Override
 	protected void paintAuto(Graphics2D g) {
 		g.rotate(f);
 		g.drawImage(image,(int)-c.r,(int)-c.r,null);
@@ -116,7 +122,9 @@ public class Ship extends MovingFgObject {
 					float dx = getTransDX(mount.f, gun.velocity);
 					float dy = getTransDY(mount.f, gun.velocity);
 					
-					model.addTransObject(new Bullet(gun.type, t, x, y, dx, dy), true);
+					Bullet bullet = new Bullet(gun.type, t, x, y, dx, dy);
+					bullet.setFreq(freq);
+					model.addTransObject(bullet, true);
 				}
 			}
 		}

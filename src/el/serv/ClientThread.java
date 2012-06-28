@@ -17,6 +17,9 @@ public class ClientThread extends Thread {
 	
 	/** client unique identifier */
 	public final int id;
+	/** server instance */
+	private final ServerMain server;
+	/** network socket */
 	private final Socket socket;
 	/** input reader for receiving data from the client */
 	private final BufferedReader clientIn;
@@ -25,11 +28,13 @@ public class ClientThread extends Thread {
 	
 	/** is this client entered */
 	public boolean entered;
-	/** last update received from client */
-	public String lastData;
+	/** clients name */
 	public String name;
-	
-	public ClientThread(Socket socket, int id) throws Exception {
+	/** client's frequency */
+	public int freq;
+
+	public ClientThread(ServerMain server, Socket socket, int id) throws Exception {
+		this.server = server;
 		setDaemon(true);
 		setPriority(Thread.NORM_PRIORITY);
 		this.socket = socket;
@@ -53,7 +58,7 @@ public class ClientThread extends Thread {
 			}
 			
 			// send server state to new client...
-			ServerMain.clientInit(this);
+			server.clientInit(this);
 			
 			// read commands from client...
 			while ((line = clientIn.readLine()) != null) {
@@ -64,28 +69,28 @@ public class ClientThread extends Thread {
 				// commands from client to server
 				
 				if (cmd.equals(ServerCommands.UPDATE)) {
-					ServerMain.clientUpdate(this, line.substring(line.indexOf(" ") + 1));
+					server.clientUpdate(this, line.substring(line.indexOf(" ") + 1));
 					
 				} else if (cmd.equals(ServerCommands.FIREREQ)) {
-					ServerMain.clientFireReq(this, line.substring(line.indexOf(" ") + 1));
+					server.clientFireReq(this, line.substring(line.indexOf(" ") + 1));
 					
 				} else if (cmd.equals(ServerCommands.TALKREQ)) {
 					String msg = line.substring(line.indexOf(" ") + 1).trim();
 					if (msg.length() > 0) {
-						ServerMain.clientTalkReq(this, msg);
+						server.clientTalkReq(this, msg);
 					}
 					
 				} else if (cmd.equals(ServerCommands.ENTERREQ)) {
-					ServerMain.clientEnterReq(this);
+					server.clientEnterReq(this);
 					
 				} else if (cmd.equals(ServerCommands.SPEC)) {
-					ServerMain.clientSpec(this);
+					server.clientSpec(this);
 					
 				} else if (cmd.equals(ServerCommands.MAPTILEREQ)) {
 					int x = Integer.parseInt(tokens.nextToken());
 					int y = Integer.parseInt(tokens.nextToken());
 					int act = Integer.parseInt(tokens.nextToken());
-					ServerMain.clientMapTileReq(this, x, y, act);
+					server.clientMapTileReq(this, x, y, act);
 					
 				} else {
 					out.println(this + ": unknown command " + line);
@@ -94,7 +99,7 @@ public class ClientThread extends Thread {
 			
 		} catch (Exception e) {
 			out.println(this + ": " + e);
-			ServerMain.clientExit(this);
+			server.clientExit(this);
 		}
 		
 		// close connection

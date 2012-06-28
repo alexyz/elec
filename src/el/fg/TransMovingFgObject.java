@@ -44,7 +44,7 @@ public abstract class TransMovingFgObject extends MovingFgObject {
 	/**
 	 * Returns true if object should be removed
 	 */
-	public final boolean remove() {
+	public final boolean isRemove() {
 		return remove;
 	}
 	

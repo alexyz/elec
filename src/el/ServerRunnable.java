@@ -4,9 +4,10 @@ import java.io.*;
 import java.net.Socket;
 import java.util.StringTokenizer;
 
+import javax.swing.JOptionPane;
+
 import el.fg.Bullet;
 import el.fg.Ship;
-import el.fg.ShipType;
 import el.serv.ClientCommands;
 import el.serv.ServerCommands;
 
@@ -17,16 +18,22 @@ public class ServerRunnable implements Runnable {
 
 	private static final PrintStream out = System.out;
 
+	//
+	// final fields
+	//
+
 	private final Socket socket;
 	private final BufferedReader serverIn;
 	private final PrintStream serverOut;
 	private final Model model;
 	private final String name;
 
+	//
+	// mutable fields
+	//
+
 	private int id;
 	private long serverTime, clientTime;
-
-
 
 	public ServerRunnable(Socket socket, Model model, String name) throws Exception {
 		this.socket = socket;
@@ -41,7 +48,7 @@ public class ServerRunnable implements Runnable {
 		try {
 			// have to send name on connect
 			sendName(name);
-			
+
 			// read commands from server...
 			String line;
 			while ((line = serverIn.readLine()) != null) {
@@ -56,8 +63,12 @@ public class ServerRunnable implements Runnable {
 					}
 
 				} else if (cmd.equals(ClientCommands.FIRE)) {
+					int freq = Integer.parseInt(tokens.nextToken());
 					Bullet bullet = new Bullet(tokens);
-					model.addTransObject(bullet, false);
+					bullet.setFreq(freq);
+					synchronized (model) {
+						model.addTransObject(bullet, false);
+					}
 
 				} else if (cmd.equals(ClientCommands.TIME)) {
 					// TODO measure latency from connect to here
@@ -65,12 +76,15 @@ public class ServerRunnable implements Runnable {
 					serverTime = t;
 					clientTime = System.nanoTime();
 					// update here to refresh time?
-					model.update();
+					synchronized (model) {
+						model.update();
+					}
 
 				} else if (cmd.equals(ClientCommands.ENTER)) {
 					int id = Integer.parseInt(tokens.nextToken());
+					int freq = Integer.parseInt(tokens.nextToken());
 					synchronized (model) {
-						model.enter(id);
+						model.enter(id, freq);
 					}
 
 				} else if (cmd.equals(ClientCommands.SPEC)) {
@@ -82,7 +96,9 @@ public class ServerRunnable implements Runnable {
 
 				} else if (cmd.equals(ClientCommands.ID)) {
 					id = Integer.parseInt(tokens.nextToken());
-					model.setId(id, name);
+					synchronized (model) {
+						model.setId(id, name);
+					}
 
 				} else if (cmd.equals(ClientCommands.MAPDATA)) {
 					synchronized (model) {
@@ -94,7 +110,7 @@ public class ServerRunnable implements Runnable {
 					int y = Integer.parseInt(tokens.nextToken());
 					int act = Integer.parseInt(tokens.nextToken());
 					synchronized (model) {
-						model.getMap().place(x, y, act);
+						model.getMap().updateMapTile(x, y, act);
 					}
 
 				} else if (cmd.equals(ClientCommands.TALK)) {
@@ -111,10 +127,12 @@ public class ServerRunnable implements Runnable {
 					synchronized (model) {
 						model.addPlayer(id, name);
 					}
-					
+
 				} else if (cmd.equals(ClientCommands.EXIT)) {
 					int id = Integer.parseInt(tokens.nextToken());
-					model.removePlayer(id);
+					synchronized (model) {
+						model.removePlayer(id);
+					}
 
 				} else {
 					out.println("unknown server message: " + line);
@@ -122,9 +140,13 @@ public class ServerRunnable implements Runnable {
 			}
 
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(out);
+			JOptionPane.showMessageDialog(ClientMain.frame, 
+					e.toString() + ": " + e.getMessage(), 
+					"Server Thread Exception", 
+					JOptionPane.ERROR_MESSAGE);
 		}
-		
+
 		model.setServer(null);
 		try {
 			socket.close();

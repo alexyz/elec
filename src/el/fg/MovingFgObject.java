@@ -9,7 +9,7 @@ import el.phys.Intersection;
 /**
  * Object with a position delta, facing angle and facing delta.
  */
-abstract class MovingFgObject extends FgObject  {
+public abstract class MovingFgObject extends FgObject  {
 	
 	/**
 	 * Max velocity
@@ -43,15 +43,18 @@ abstract class MovingFgObject extends FgObject  {
 	protected boolean reflect = true;
 	
 	/**
-	 * Should detect collisions
+	 * Should detect collisions with background
 	 */
-	protected boolean collide = true;
+	protected boolean collideBackground = true;
 	
 	/**
 	 * Number of times collided
 	 */
 	protected int hit;
 	
+	/**
+	 * players team (must be >= 1)
+	 */
 	protected int freq;
 	
 	/**
@@ -59,6 +62,14 @@ abstract class MovingFgObject extends FgObject  {
 	 */
 	public MovingFgObject(Circle c) {
 		super(c);
+	}
+	
+	public void setFreq(int freq) {
+		this.freq = freq;
+	}
+	
+	public int getFreq() {
+		return freq;
 	}
 	
 	@Override
@@ -102,7 +113,8 @@ abstract class MovingFgObject extends FgObject  {
 		float dx = vx * floatTimeDelta;
 		float dy = vy * floatTimeDelta;
 		Intersection r;
-		if (collide && (r = model.intersectbg(this, dx, dy)) != null) {
+		
+		if (collideBackground && (r = model.backgroundCollision(this, dx, dy)) != null) {
 			hit++;
 			collision();
 			if (reflect) {
@@ -153,7 +165,7 @@ abstract class MovingFgObject extends FgObject  {
 	}
 	
 	/**
-	 * get x velocity of an object emerging from this object at the given angle and speed
+	 * get x velocity of an object emerging from this object at the given angle and velocity in pixels per second
 	 */
 	protected float getTransDX(float tf, float tv) {
 		return sin(f + tf) * tv + vx;

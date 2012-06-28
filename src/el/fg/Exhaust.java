@@ -25,7 +25,7 @@ public class Exhaust extends TransMovingFgObject {
 		this.vx = dx;
 		this.vy = dy;
 		this.reflect = false;
-		this.collide = false;
+		this.collideBackground = false;
     }
 	
 	@Override

@@ -45,7 +45,7 @@ class CanvasView extends Canvas {
 				int y = getModelY() + p.y;
 				System.out.println("view mouse clicked: " + x + ", " + y);
 				//model.getMap().place(x, y, e.getButton() == MouseEvent.BUTTON3);
-				model.updateMap(x, y, e.getButton());
+				model.updateMapTile(x, y, e.getButton());
 			}
 			@Override
 			public void mouseMoved(MouseEvent e) {
@@ -151,6 +151,7 @@ class CanvasView extends Canvas {
 		int mxo = getModelX(), myo = getModelY();
 		// view width, height
 		int w = getWidth(), h = getHeight();
+		int selfid = model.getId();
 		
 		for (FgObject o : objects) {
 			// object width, height
@@ -169,6 +170,14 @@ class CanvasView extends Canvas {
 					g.setColor(Color.gray);
 					g.drawOval(-r, -r, d, d);
 					g.drawString(".o", 0, 0);
+					// paint player name if not self
+					if (o.getId() != selfid) {
+						String name = model.getPlayers().get(o.getId());
+						if (name != null) {
+							g.setColor(Color.yellow);
+							g.drawString(name, r, -r);
+						}
+					}
 				}
 				
 				g.translate(-tx, -ty);

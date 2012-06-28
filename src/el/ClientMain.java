@@ -7,6 +7,7 @@ import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.Socket;
 import java.net.URL;
 import java.util.HashMap;
@@ -22,13 +23,13 @@ public class ClientMain {
 	public static final String TILE1_IMAGE = "/img/tile1.png";
 	
 	public static long renderTime, freeTime;
+	public static JFrame frame;
 
 	private static final PrintStream out = System.out;
 	private static final Map<String, Image> images = new HashMap<String, Image>();
 	private static final Model model = new Model();
 	private static final CanvasView view = new CanvasView(model);
 	
-	private static JFrame frame;
 	private static Timer timer;
 	private static ServerRunnable server;
 	private static long endTime;
@@ -81,12 +82,21 @@ public class ClientMain {
 				long startt = System.nanoTime();
 				freeTime = startt - endTime;
 				
-				// don't allow network updates when updating and painting
-				// TODO - change ServerRunnable so it posts AWT events rather than use sync
-				synchronized (model) {
-					model.update();
-					// should skip this if behind
-					view.paintImmediately(0, 0, view.getWidth(), view.getHeight());
+				try {
+					// don't allow network updates when updating and painting
+					// TODO - change ServerRunnable so it posts AWT events rather than use sync
+					synchronized (model) {
+						model.update();
+						// should skip this if behind
+						view.paintImmediately(0, 0, view.getWidth(), view.getHeight());
+					}
+				} catch (Exception ex) {
+					ex.printStackTrace(out);
+					JOptionPane.showMessageDialog(frame, 
+							ex.toString() + ": " + ex.getMessage(), 
+							"AWT Thread Exception", 
+							JOptionPane.ERROR_MESSAGE);
+					System.exit(1);
 				}
 				
 				long endt = System.nanoTime();
@@ -128,7 +138,7 @@ public class ClientMain {
 			}
 		});
 		
-		JMenuItem enterReqMenuItem = new JMenuItem("Request Enter");
+		JMenuItem enterReqMenuItem = new JMenuItem("Enter");
 		enterReqMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -161,7 +171,7 @@ public class ClientMain {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				model.setId(0, "self");
-				model.enter(model.getId());
+				model.enter(model.getId(), 1);
 				out.println("view request focus: " + view.requestFocusInWindow());
 			}
 		});
