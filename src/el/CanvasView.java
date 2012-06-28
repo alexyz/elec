@@ -6,7 +6,7 @@ import java.awt.image.BufferStrategy;
 
 import el.bg.BgObject;
 import el.fg.FgObject;
-import el.fg.Ship;
+import el.fg.ShipObject;
 
 import java.util.List;
 
@@ -166,10 +166,7 @@ class CanvasView extends Canvas {
 				g.translate(tx, ty);
 				o.paint(g);
 				
-				if (o instanceof Ship) {
-					g.setColor(Color.gray);
-					g.drawOval(-r, -r, d, d);
-					g.drawString(".o", 0, 0);
+				if (o instanceof ShipObject) {
 					// paint player name if not self
 					if (o.getId() != selfid) {
 						String name = model.getPlayers().get(o.getId());

@@ -1,12 +1,9 @@
 package el.fg;
 
 import java.awt.Color;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
-class Gun {
+
+public class Gun {
 	static final Color[] colours = {
 		new Color(1f, 0f, 0f),
 		new Color(1f, 1f, 0f),
@@ -14,20 +11,22 @@ class Gun {
 		new Color(1f, 0f, 1f)
 	};
 	
-	enum Type {
-		gun1(0, 2),
-		gun2(1, 2),
-		gun3(2, 2),
-		gun4(3, 2),
-		bomb1(0, 5), 
-		bomb2(1, 5),
-		bomb3(2, 5),
-		bomb4(3, 5);
+	public enum Type {
+		gun1(0, 2, 2),
+		gun2(1, 2, 2),
+		gun3(2, 2, 2),
+		gun4(3, 2, 2),
+		bomb1(0, 5, 20), 
+		bomb2(1, 5, 20),
+		bomb3(2, 5, 20),
+		bomb4(3, 5, 20);
 		
-		final Color colour;
-		final int radius;
-		private Type(int colour, int radius) {
+		public final Color colour;
+		public final int radius;
+		public final int prox;
+		private Type(int colour, int radius, int prox) {
 			this.radius = radius;
+			this.prox = prox;
 			this.colour = colours[colour];
 		}
 	}

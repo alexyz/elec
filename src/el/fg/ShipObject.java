@@ -2,6 +2,7 @@ package el.fg;
 
 import static el.phys.FloatMath.*;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.util.StringTokenizer;
@@ -12,7 +13,7 @@ import el.phys.Circle;
 /**
  * Simple subclass of moving object, can draw a ship and spawn bullets
  */
-public class Ship extends MovingFgObject {
+public class ShipObject extends MovingObject {
 	
 	/**
 	 * image used to draw ship
@@ -35,7 +36,7 @@ public class Ship extends MovingFgObject {
 	 */
 	private float thrusttime;
 	
-	public Ship(ShipType type, int mx, int my) {
+	public ShipObject(ShipType type, int mx, int my) {
 		super(new Circle(mx, my, 24));
 		
 		image = ClientMain.getImage(type.img);
@@ -67,6 +68,9 @@ public class Ship extends MovingFgObject {
 	
 	@Override
 	protected void paintAuto(Graphics2D g) {
+		int r = (int) c.r;
+		g.setColor(Color.gray);
+		g.drawOval(-r, -r, r*2, r*2);
 		g.rotate(f);
 		g.drawImage(image,(int)-c.r,(int)-c.r,null);
 	}
@@ -122,7 +126,7 @@ public class Ship extends MovingFgObject {
 					float dx = getTransDX(mount.f, gun.velocity);
 					float dy = getTransDY(mount.f, gun.velocity);
 					
-					Bullet bullet = new Bullet(gun.type, t, x, y, dx, dy);
+					BulletObject bullet = new BulletObject(gun.type, t, x, y, dx, dy);
 					bullet.setFreq(freq);
 					model.addTransObject(bullet, true);
 				}

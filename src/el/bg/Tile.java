@@ -56,6 +56,7 @@ public class Tile extends Rect {
 	}
 	
 	public Intersection intersects(Circle c, float tx, float ty) {
+		// XXX bf should be 1 for bombs
 		return CSIntersect.intersect(this, c, tx, ty, 0.75f);
 	}
 }

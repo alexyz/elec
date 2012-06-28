@@ -40,8 +40,8 @@ public class Model {
 	/**
 	 * transient foreground objects (bullets)
 	 */
-	private final ArrayList<TransMovingFgObject> transObjects = new ArrayList<TransMovingFgObject>();
-	private final QuadMap<TransMovingFgObject> transMap = new QuadMap<TransMovingFgObject>();
+	private final ArrayList<TransObject> transObjects = new ArrayList<TransObject>();
+	private final QuadMap<BulletObject> transMap = new QuadMap<BulletObject>(new BulletQuadMapKey());
 	private final ActionMap actionMap = new ActionMap();
 	private final ArrayList<FgRunnable> actions = new ArrayList<FgRunnable>();
 	private final ModelObject modelObj = new ModelObject();
@@ -142,7 +142,7 @@ public class Model {
 	 * enter someone, possibly user into the game
 	 */
 	public void enter(int id, int freq) {
-		Ship ship = new Ship(ShipType.types[0], centrex, centrey);
+		ShipObject ship = new ShipObject(ShipType.types[0], centrex, centrey);
 		ship.setFreq(freq);
 		if (this.id == id) {
 			// TODO need to put focused object on top
@@ -214,19 +214,20 @@ public class Model {
 			}
 		}
 		
+		// FIXME need seperate bullets and other trans objects
 		if (transObjects.size() > 0) {
-			Iterator<TransMovingFgObject> i = transObjects.iterator();
+			Iterator<TransObject> i = transObjects.iterator();
 			while (i.hasNext()) {
-				TransMovingFgObject o = i.next();
+				TransObject o = i.next();
 				int oldx = o.getX(), oldy = o.getY();
 				o.update(floatTime, floatTimeDelta);
-				if (o instanceof Bullet) {
-					transMap.update(o, oldx, oldy);
+				if (o instanceof BulletObject) {
+					transMap.update((BulletObject) o, oldx, oldy);
 				}
 				if (o.isRemove()) {
 					i.remove();
-					if (o instanceof Bullet) {
-						transMap.remove(o);
+					if (o instanceof BulletObject) {
+						transMap.remove((BulletObject) o);
 					}
 				}
 			}
@@ -237,9 +238,9 @@ public class Model {
 		}
 		
 		// send to server - after possible reflect
-		if (server != null && focusObj instanceof Ship && forceUpdate) {
+		if (server != null && focusObj instanceof ShipObject && forceUpdate) {
 			// update focused ship on server
-			server.sendUpdate((Ship) focusObj);
+			server.sendUpdate((ShipObject) focusObj);
 			lastUpdate = floatTime;
 			forceUpdate = false;
 		}
@@ -247,6 +248,9 @@ public class Model {
 		
 	}
 	
+	/**
+	 * get time at last call to update (or during call to update).
+	 */
 	public float getTime() {
 		return updateTime;
 	}
@@ -267,7 +271,7 @@ public class Model {
 		return objects;
 	}
 	
-	List<TransMovingFgObject> getTransFgObjects() {
+	List<TransObject> getTransFgObjects() {
 		return transObjects;
 	}
 	
@@ -324,14 +328,14 @@ public class Model {
 	/**
 	 * Add a transient object, optionally sending to server
 	 */
-	public void addTransObject(TransMovingFgObject obj, boolean send) {
+	public void addTransObject(TransObject obj, boolean send) {
 		obj.setModel(this, -1);
 		transObjects.add(0, obj);
-		if (obj instanceof Bullet) {
-			transMap.add(obj);
+		if (obj instanceof BulletObject) {
+			transMap.add((BulletObject) obj);
 		}
-		if (send && server != null && obj instanceof Bullet) {
-			server.sendFire((Bullet)obj);
+		if (send && server != null && obj instanceof BulletObject) {
+			server.sendFire((BulletObject)obj);
 		}
 	}
 	
@@ -344,10 +348,10 @@ public class Model {
 		return r;
 	}
 	
-	public void foregroundCollision(Ship ship) {
-		ArrayList<TransMovingFgObject> l = transMap.get(ship);
+	public void foregroundCollision(ShipObject ship) {
+		ArrayList<BulletObject> l = transMap.get(ship.getX(), ship.getY(), ship.getRadius());
 		if (l != null) {
-			for (TransMovingFgObject obj : l) {
+			for (TransObject obj : l) {
 				if (obj.getFreq() != ship.getFreq()) {
 					// FIXME set remove, do something interesting
 					System.out.println("impact!!");
@@ -389,3 +393,4 @@ public class Model {
 	}
 	
 }
+

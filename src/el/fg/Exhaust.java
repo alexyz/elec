@@ -7,7 +7,7 @@ import el.phys.Circle;
 /**
  * Exhaust
  */
-public class Exhaust extends TransMovingFgObject {
+public class Exhaust extends TransObject {
 	
 	private static final float lifet = 0.5f;
 	private static final float radius = 5f;

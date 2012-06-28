@@ -6,8 +6,8 @@ import java.util.StringTokenizer;
 
 import javax.swing.JOptionPane;
 
-import el.fg.Bullet;
-import el.fg.Ship;
+import el.fg.BulletObject;
+import el.fg.ShipObject;
 import el.serv.ClientCommands;
 import el.serv.ServerCommands;
 
@@ -64,7 +64,7 @@ public class ServerRunnable implements Runnable {
 
 				} else if (cmd.equals(ClientCommands.FIRE)) {
 					int freq = Integer.parseInt(tokens.nextToken());
-					Bullet bullet = new Bullet(tokens);
+					BulletObject bullet = new BulletObject(tokens);
 					bullet.setFreq(freq);
 					synchronized (model) {
 						model.addTransObject(bullet, false);
@@ -192,14 +192,14 @@ public class ServerRunnable implements Runnable {
 		send(ServerCommands.MAPTILEREQ, x, y, act);
 	}
 
-	public void sendFire(Bullet bullet) {
+	public void sendFire(BulletObject bullet) {
 		send(ServerCommands.FIREREQ, bullet.write(new StringBuilder()));
 	}
 
 	/**
 	 * Send ship update to server
 	 */
-	public void sendUpdate(Ship ship) {
+	public void sendUpdate(ShipObject ship) {
 		send(ServerCommands.UPDATE, ship.write(new StringBuilder()));
 	}
 

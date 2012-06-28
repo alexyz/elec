@@ -1,87 +1,95 @@
-
 package el.phys;
 
 import java.util.*;
 
 /**
- * A map of XY co-ordinates from 0-1M to list of objects
+ * A map of integer XY co-ordinates from 0-1M to list of objects.
+ * Objects can be retrieved by proximity to a point.
  * 
- * TODO some method to get objs within square rather than within radius? for benefit of map tiles
+ * Note: there should be NO autoboxing in this class.
+ * 
+ * TODO some method to get objs within square rather than within radius? for
+ * benefit of map tiles
  */
-public class QuadMap<T extends QuadMap.XYR> {
+public class QuadMap<T> {
 	
-	public interface XYR {
-		
-		public int getX();
-		
-		public int getY();
-		
-		public int getR();
+	/** interface for getting the x, y and radius of and object in the map */
+	public interface Key<T> {
+		/** get x position */
+		public int getX(T obj);
+		/** get y position */
+		public int getY(T obj);
+		/** get radius. for bombs this should be prox radius, not physical radius */
+		public int getR(T obj);
 	}
 	
+	//
+	// static fields
+	//
+	
 	// total 20 bits, 12 for quad, 8 within quad
-	private static final Integer[] ints = new Integer[1 << 12];
-	private static final int quadbits = 8;
+	/** number of quadrants (log2) */
+	private static final int quadbits = 12;
+	/** integer object cache */
+	private static final Integer[] ints = new Integer[1 << quadbits];
+	/** number of locations within quadrant (log2) */
+	private static final int subquadbits = 8;
 	
 	static {
+		// could make these on demand instead, but there's not that many of them
 		for (int n = 0; n < ints.length; n++) {
 			ints[n] = Integer.valueOf(n);
 		}
 	}
 	
-	public static void main(String[] args) {
-		Random r = new Random();
-		QuadMap<MyXY> q = new QuadMap<MyXY>();
-		ArrayList<MyXY> l = new ArrayList<MyXY>();
-		for (int n = 0; n < 10000; n++) {
-			final int x = r.nextInt(10000) + 495000;
-			final int y = r.nextInt(10000) + 495000;
-			MyXY obj = new MyXY(x, y, 10);
-			q.add(obj);
-			l.add(obj);
-		}
-		System.out.println("quadmap is " + q);
-		//ArrayList<MyXY> l = q.slowget(495000, 495000, 1000);
-		//System.out.println("slow query returns " + l);
-		ArrayList<MyXY> l2 = q.get(495000, 495000, 1000);
-		System.out.println("fast query returns " + l2);
-		for (int n = 0; n < 10; n++) {
-			System.out.println("updating");
-			for (MyXY obj : l) {
-				int oldx = obj.x, oldy = obj.y;
-				obj.x = r.nextInt(10000) + 495000;
-				obj.y = r.nextInt(10000) + 495000;
-				q.update(obj, oldx, oldy);
-			}
-			System.out.println("quadmap is " + q);
-		}
+	//
+	// static methods
+	//
+	
+	/** return quadrant for x or y co-ordinate */
+	private static int quad(final int n) {
+		return n >> subquadbits;
 	}
+	
+	/** return quadrant key for x or y co-ordinate */
+	private static Integer quadKey(final int n) {
+		return ints[n >> subquadbits];
+	}
+	
+	//
+	// instance fields
+	//
 	
 	/** map of x quadrant to map of y quadrant to list of objects */
 	private final TreeMap<Integer, TreeMap<Integer, ArrayList<T>>> xmap;
+	/** key function */
+	private final Key<T> key;
 	
 	/** create a new quad map */
-	public QuadMap() {
-		xmap = new TreeMap<Integer, TreeMap<Integer, ArrayList<T>>>();
+	public QuadMap(QuadMap.Key<T> key) {
+		this.key = key;
+		this.xmap = new TreeMap<Integer, TreeMap<Integer, ArrayList<T>>>();
 	}
+	
+	//
+	// instance methods
+	//
 	
 	/**
 	 * empty the quad map
 	 */
 	public void clear() {
-		// prob not very gc friendly
+		// probably not very gc friendly
 		xmap.clear();
 	}
 	
 	/**
 	 * update the xy value of the given object
 	 */
-	public void update(T obj, int oldx, int oldy) {
-		// TODO should compare quadrants not co-ordinates
-		if (obj.getX() == oldx && obj.getY() == oldy) {
-			//System.out.println("  no need to update");
-		} else {
-			remove(obj, oldx, oldy);
+	public void update(final T obj, final int oldx, final int oldy) {
+		// only update if quadrant has changed
+		if (quad(key.getX(obj)) != quad(oldx) || quad(key.getY(obj)) != quad(oldy)) {
+			remove(obj, quadKey(oldx), quadKey(oldy));
 			add(obj);
 		}
 	}
@@ -89,25 +97,26 @@ public class QuadMap<T extends QuadMap.XYR> {
 	/**
 	 * remove the given object
 	 */
-	public void remove(T obj) {
-		remove(obj, obj.getX(), obj.getY());
+	public void remove(final T obj) {
+		remove(obj, quadKey(key.getX(obj)), quadKey(key.getY(obj)));
 	}
 	
 	/**
-	 * remove the given object that had the given XY value when it was added/updated
+	 * remove the given object that was in the given quadrant when it was
+	 * added/updated
 	 */
-	private void remove(T obj, int oldx, int oldy) {
-		Integer oldqx = ints[oldx >> quadbits];
-		Integer oldqy = ints[oldy >> quadbits];
-		TreeMap<Integer, ArrayList<T>> ymap = xmap.get(oldqx);
-		ArrayList<T> list = ymap.get(oldqy);
+	private void remove(final T obj, final Integer qoldx, final Integer qoldy) {
+		TreeMap<Integer, ArrayList<T>> ymap = xmap.get(qoldx);
+		ArrayList<T> list = ymap.get(qoldy);
 		if (!list.remove(obj)) {
 			throw new RuntimeException("could not find " + obj + " in list " + list);
 		}
+		
+		// remove list and map if now empty
 		if (list.size() == 0) {
-			ymap.remove(oldqy);
+			ymap.remove(qoldy);
 			if (ymap.size() == 0) {
-				xmap.remove(oldqx);
+				xmap.remove(qoldx);
 			}
 		}
 	}
@@ -115,37 +124,33 @@ public class QuadMap<T extends QuadMap.XYR> {
 	/**
 	 * add the given object
 	 */
-	public void add(T obj) {
-		int x = obj.getX();
-		int y = obj.getY();
-		Integer qx = ints[x >> quadbits];
-		Integer qy = ints[y >> quadbits];
+	public void add(final T obj) {
+		Integer qx = quadKey(key.getX(obj));
 		TreeMap<Integer, ArrayList<T>> ymap = xmap.get(qx);
 		if (ymap == null) {
 			xmap.put(qx, ymap = new TreeMap<Integer, ArrayList<T>>());
 		}
+		
+		Integer qy = quadKey(key.getY(obj));
 		ArrayList<T> list = ymap.get(qy);
 		if (list == null) {
 			// default size is 10, too many?
 			ymap.put(qy, list = new ArrayList<T>());
 		}
+		
 		list.add(obj);
 	}
 	
-	public ArrayList<T> get(QuadMap.XYR obj) {
-		return get(obj.getX(), obj.getY(), obj.getR());
-	}
-	
 	/**
-	 * get all objects within r distance of given XY.
-	 * returns null if none.
+	 * get all objects within r distance of given XY. returns null if none.
 	 */
 	public ArrayList<T> get(final int x, final int y, final int r) {
+		final int xql = quad(x - r);
+		final int xqh = quad(x + r);
+		final int yql = quad(y - r);
+		final int yqh = quad(y + r);
 		ArrayList<T> ret = null;
-		int xql = (x - r) >> quadbits;
-		int xqh = ((x + r) >> quadbits);
-		int yql = (y - r) >> quadbits;
-		int yqh = ((y + r) >> quadbits);
+		
 		for (int xq = xql; xq <= xqh; xq++) {
 			final TreeMap<Integer, ArrayList<T>> ymap = xmap.get(ints[xq]);
 			if (ymap != null) {
@@ -153,7 +158,7 @@ public class QuadMap<T extends QuadMap.XYR> {
 					final ArrayList<T> list = ymap.get(ints[yq]);
 					if (list != null) {
 						for (T obj : list) {
-							if (StrictMath.hypot(x - obj.getX(), y - obj.getY()) <= r + obj.getR()) {
+							if (StrictMath.hypot(x - key.getX(obj), y - key.getY(obj)) <= r + key.getR(obj)) {
 								if (ret == null) {
 									ret = new ArrayList<T>();
 								}
@@ -165,15 +170,10 @@ public class QuadMap<T extends QuadMap.XYR> {
 			}
 		}
 		/*
-		if (ret != null) {
-			System.out.println(String.format("get [%d-%d, %d-%d] => %s", 
-				xql * 256, 
-				(xqh + 1) * 256 - 1, 
-				yql * 256,
-				(yqh + 1) * 256 - 1,
-				ret));
-		}
-		*/
+		 * if (ret != null) {
+		 * System.out.println(String.format("get [%d-%d, %d-%d] => %s", xql *
+		 * 256, (xqh + 1) * 256 - 1, yql * 256, (yqh + 1) * 256 - 1, ret)); }
+		 */
 		return ret;
 	}
 	
@@ -185,7 +185,7 @@ public class QuadMap<T extends QuadMap.XYR> {
 		for (TreeMap<Integer, ArrayList<T>> ymap : xmap.values()) {
 			for (ArrayList<T> list : ymap.values()) {
 				for (T obj : list) {
-					if (StrictMath.hypot(x - obj.getX(), y - obj.getY()) <= r + obj.getR()) {
+					if (StrictMath.hypot(x - key.getX(obj), y - key.getY(obj)) <= r + key.getR(obj)) {
 						ret.add(obj);
 					}
 				}
@@ -207,35 +207,5 @@ public class QuadMap<T extends QuadMap.XYR> {
 			}
 		}
 		return String.format("QM[ymaps=%d lists=%d maxlistsz=%d objs=%d]", xmap.size(), l, s, t);
-	}
-}
-
-class MyXY implements QuadMap.XYR {
-	
-	public int x;
-	public int y;
-	public int r;
-	
-	public MyXY(int x, int y, int r) {
-		this.x = x;
-		this.y = y;
-		this.r = r;
-	}
-	
-	public int getX() {
-		return x;
-	}
-	
-	public int getY() {
-		return y;
-	}
-	
-	public int getR() {
-		return r;
-	}
-	
-	@Override
-	public String toString() {
-		return String.format("(%d,%d)", x, y);
 	}
 }

@@ -8,7 +8,7 @@ import el.phys.Circle;
 /**
  * Transient object (removed after specified time)
  */
-public abstract class TransMovingFgObject extends MovingFgObject {
+public abstract class TransObject extends MovingObject {
 	
 	/**
 	 * Start and end time
@@ -20,7 +20,7 @@ public abstract class TransMovingFgObject extends MovingFgObject {
 	 */
 	protected boolean remove;
 	
-	public TransMovingFgObject(Circle c, float startt, float endt) {
+	public TransObject(Circle c, float startt, float endt) {
 		super(c);
 		this.startt = startt;
 		this.endt = endt;

@@ -13,7 +13,7 @@ import el.phys.Intersection;
  * Object with a position, can paint and update and receive input if it has the focus
  * TODO should probably merge this with MovingFgObject
  */
-public abstract class FgObject implements QuadMap.XYR {
+public abstract class FgObject {
 	
 	/**
 	 * Location of object
@@ -75,11 +75,6 @@ public abstract class FgObject implements QuadMap.XYR {
 		return (int) (c.y + 0.5f);
 	}
 	
-	// FIXME
-	public int getR() {
-		return getRadius();
-	}
-	
 	/**
 	 * Width of object (for view clipping), default 0.
 	 */
@@ -107,6 +102,7 @@ public abstract class FgObject implements QuadMap.XYR {
 	/**
 	 * Paint delegate. OK to leave a net transformation in subclass implementation.
 	 */
+	@Deprecated
 	protected void paintAuto(Graphics2D g) {
 		g.drawString(getClass().getSimpleName(), 0, 0);
 	}

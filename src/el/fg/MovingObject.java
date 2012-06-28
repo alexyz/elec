@@ -9,7 +9,7 @@ import el.phys.Intersection;
 /**
  * Object with a position delta, facing angle and facing delta.
  */
-public abstract class MovingFgObject extends FgObject  {
+public abstract class MovingObject extends FgObject  {
 	
 	/**
 	 * Max velocity
@@ -60,7 +60,7 @@ public abstract class MovingFgObject extends FgObject  {
 	/**
 	 * Create object with given location and radius
 	 */
-	public MovingFgObject(Circle c) {
+	public MovingObject(Circle c) {
 		super(c);
 	}
 	
@@ -115,8 +115,6 @@ public abstract class MovingFgObject extends FgObject  {
 		Intersection r;
 		
 		if (collideBackground && (r = model.backgroundCollision(this, dx, dy)) != null) {
-			hit++;
-			collision();
 			if (reflect) {
 				// reflected position
 				c.x += r.rtx;
@@ -133,6 +131,9 @@ public abstract class MovingFgObject extends FgObject  {
 				vx = 0f;
 				vy = 0f;
 			}
+			
+			hit++;
+			collision();
 			
 		} else {
 			// just update the position

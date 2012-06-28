@@ -76,10 +76,11 @@ class ViewKeyListener implements KeyListener {
 				model.action(ActionMap.FIRE1);
 				break;
 			case KeyEvent.VK_TAB:
-				model.action(ActionMap.FIRE2);
-				break;
-			case KeyEvent.VK_6:
-				model.action(ActionMap.FIRE3);
+				if (e.isShiftDown()) {
+					model.action(ActionMap.FIRE3);
+				} else {
+					model.action(ActionMap.FIRE2);
+				}
 				break;
 			default:
 				//System.out.printf("pressed '%c' -> %d\n", e.getKeyChar(), e.getKeyCode());
@@ -90,30 +91,26 @@ class ViewKeyListener implements KeyListener {
 	public void keyReleased(KeyEvent e) {
 		switch (e.getKeyCode()) {
 			case KeyEvent.VK_UP:
-				// needs to set isUp
-				// or have some queue of actions in the model
-				model.unaction("up");
+				model.unaction(ActionMap.UP);
 				break;
 			case KeyEvent.VK_DOWN:
-				model.unaction("down");
+				model.unaction(ActionMap.DOWN);
 				break;
 			case KeyEvent.VK_LEFT:
-				model.unaction("left");
+				model.unaction(ActionMap.LEFT);
 				break;
 			case KeyEvent.VK_RIGHT:
-				model.unaction("right");
+				model.unaction(ActionMap.RIGHT);
 				break;
 			case KeyEvent.VK_CONTROL:
-				model.unaction("fire1");
+				model.unaction(ActionMap.FIRE1);
 				break;
 			case KeyEvent.VK_TAB:
-				model.unaction("fire2");
+				model.unaction(ActionMap.FIRE2);
+				model.unaction(ActionMap.FIRE3);
 				break;
 			case KeyEvent.VK_ESCAPE:
 				System.exit(0);
-				break;
-			case KeyEvent.VK_6:
-				model.unaction("fire3");
 				break;
 			default:
 				// System.out.printf("released '%c' -> %d\n", e.getKeyChar(),
