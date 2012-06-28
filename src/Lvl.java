@@ -7,6 +7,7 @@ import javax.imageio.ImageIO;
 /**
  * small program to read subspace lvl files and write the tileset to a bmp and
  * the map data to a png
+ * see http://www.rarefied.org/subspace/lvlformat.html
  */
 public class Lvl {
 	public static void main(String[] args) throws Exception {
