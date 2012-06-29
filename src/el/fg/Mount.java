@@ -1,7 +1,7 @@
 package el.fg;
 
+@Deprecated
 class Mount {
-	// TODO seq, active
 	final float x;
 	final float y;
 	final float f;

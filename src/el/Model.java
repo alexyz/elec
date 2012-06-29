@@ -4,6 +4,7 @@ package el;
 import java.util.*;
 
 import el.phys.*;
+import el.serv.ServerCommands;
 import el.bg.*;
 import el.fg.*;
 
@@ -104,7 +105,8 @@ public class Model {
 	
 	public void sendMsg(String msg) {
 		if (server != null) {
-			server.sendTalkReq(msg);
+			//server.sendTalkReq(msg);
+			server.send(ServerCommands.TALKREQ, msg);
 		} else {
 			msgs.add(new Msg(0, "(self)", msg));
 		}
@@ -133,31 +135,12 @@ public class Model {
 	 * player has disconnected
 	 */
 	public void removePlayer(int id) {
-		spec(id);
+		removeFgObject(id);
 		String name = players.remove(id);
 		msgs.add(new Msg(0, null, name + " disconnected"));
 	}
 	
-	/**
-	 * enter someone, possibly user into the game
-	 */
-	public void enter(int id, int freq) {
-		ShipObject ship = new ShipObject(ShipType.types[0], centrex, centrey);
-		ship.setFreq(freq);
-		if (this.id == id) {
-			// TODO need to put focused object on top
-			focusObj = ship;
-			forceUpdate = true;
-		}
-		addFgObject(ship, id);
-		String name = players.get(id);
-		msgs.add(new Msg(0, null, name + " entered on freq " + freq));
-	}
-	
-	/**
-	 * remove the given user (possibly self) from the game
-	 */
-	public void spec(int id) {
+	private void removeFgObject(int id) {
 		Iterator<FgObject> i = objects.iterator();
 		while (i.hasNext()) {
 			if (i.next().getId() == id) {
@@ -166,17 +149,58 @@ public class Model {
 			}
 		}
 		if (focusObj != null && focusObj.getId() == id) {
+			// move spec view to point of explosion
+			modelObj.getPosition().x = focusObj.getPosition().x;
+			modelObj.getPosition().y = focusObj.getPosition().y;
 			focusObj = modelObj;
 		}
+	}
+	
+	public void killed(int id, int killerId, float x, float y) {
+		removeFgObject(id);
+		ExplodeObject ex = new ExplodeObject(x, y, 24, getTime());
+		addTransObject(ex, false);
+		String name = players.get(id);
+		String killerName = players.get(killerId);
+		// if two have same freq, should say murdered
+		msgs.add(new Msg(0, null, name + " killed by " + killerName));
+	}
+	
+	/**
+	 * enter someone, possibly user into the game
+	 */
+	public void enter(int id, int freq, float x, float y, boolean msg) {
+		if (id == focusObj.getId()) {
+			throw new RuntimeException();
+		}
+		ShipObject ship = new ShipObject(ShipType.types[0], x, y);
+		ship.setFreq(freq);
+		if (this.id == id) {
+			// TODO need to put focused object on top
+			focusObj = ship;
+			forceUpdate = true;
+		}
+		addFgObject(ship, id);
+		if (msg) {
+			String name = players.get(id);
+			msgs.add(new Msg(0, null, name + " entered on freq " + freq));
+		}
+	}
+	
+	/**
+	 * remove the given user (possibly self) from the game
+	 */
+	public void spec(int id) {
+		removeFgObject(id);
 		String name = players.get(id);
 		msgs.add(new Msg(0, null, name + " spectates"));
 	}
 	
 	/**
-	 * focus next foreground object. while entered you should only be able to
-	 * focus one (your ship).
+	 * focus next foreground object.
 	 */
-	void focusCycle() {
+	public void focusCycle() {
+		// TODO prevent focus cycle when playing
 		if (focusObj == modelObj) {
 			if (objects.size() > 0)
 				focusObj = objects.get(0);
@@ -214,7 +238,7 @@ public class Model {
 			}
 		}
 		
-		// FIXME need seperate bullets and other trans objects
+		// TODO separate bullets and other trans objects
 		if (transObjects.size() > 0) {
 			Iterator<TransObject> i = transObjects.iterator();
 			while (i.hasNext()) {
@@ -224,6 +248,7 @@ public class Model {
 				if (o instanceof BulletObject) {
 					transMap.update((BulletObject) o, oldx, oldy);
 				}
+				// see if object wants to be removed due to timeout/collision
 				if (o.isRemove()) {
 					i.remove();
 					if (o instanceof BulletObject) {
@@ -237,15 +262,60 @@ public class Model {
 			o.update(floatTime, floatTimeDelta);
 		}
 		
+		// check if players ship has hit any transients
+		if (id > 0 && focusObj.getId() == id) {
+			ShipObject s = (ShipObject) focusObj;
+			ArrayList<BulletObject> l = transMap.get(s.getX(), s.getY(), s.getRadius());
+			int killerId = 0;
+			if (l != null) {
+				for (BulletObject obj : l) {
+					if (obj.getFreq() != s.getFreq() && !obj.hitSent) {
+						//server.sendHit(obj.getId());
+						server.send(ServerCommands.HIT, obj.getId());
+						obj.hitSent = true;
+						//FIXME hack until we get proper info types
+						s.setEnergy(s.getEnergy() - 100f);
+						if (s.getEnergy() < 0) {
+							// object id of creator is encoded in transient id
+							killerId = obj.getId() / 1000;
+						}
+					}
+				}
+			}
+			if (s.getEnergy() < 0) {
+				// wait for server to send message back for explosion
+				server.send(ServerCommands.KILLED, killerId, focusObj.getPosition().x, focusObj.getPosition().y);
+			}
+		}
+		
 		// send to server - after possible reflect
 		if (server != null && focusObj instanceof ShipObject && forceUpdate) {
 			// update focused ship on server
-			server.sendUpdate((ShipObject) focusObj);
+			//server.sendUpdate((ShipObject) focusObj);
+			server.send(ServerCommands.UPDATE, focusObj);
 			lastUpdate = floatTime;
 			forceUpdate = false;
 		}
 		
 		
+	}
+	
+	/**
+	 * Create explosion transient
+	 */
+	public void explode(int transId) {
+		for (TransObject obj : transObjects) {
+			if (obj.getId() == transId) {
+				// TODO inflict damage on self
+				transObjects.remove(obj);
+				transMap.remove((BulletObject) obj);
+				// TODO get actual hit position
+				ExplodeObject ex = new ExplodeObject(obj.getX(), obj.getY(), obj.getRadius(), getTime());
+				addTransObject(ex, false);
+				return;
+			}
+		}
+		System.out.println("could not find trans id " + transId);
 	}
 	
 	/**
@@ -255,30 +325,22 @@ public class Model {
 		return updateTime;
 	}
 	
-	int getX() {
-		return focusObj.getX();
-	}
-	
-	int getY() {
-		return focusObj.getY();
-	}
-	
-	List<BgObject> getBgObjects() {
+	public List<BgObject> getBgObjects() {
 		return bgObjects;
 	}
 	
-	List<FgObject> getFgObjects() {
+	public List<FgObject> getFgObjects() {
 		return objects;
 	}
 	
-	List<TransObject> getTransFgObjects() {
+	public List<TransObject> getTransFgObjects() {
 		return transObjects;
 	}
 	
 	/**
 	 * Apply action to focused object (until unactioned)
 	 */
-	void action(String name) {
+	public void action(String name) {
 		FgRunnable action = actionMap.get(name);
 		if (action == null)
 			throw new RuntimeException(name);
@@ -289,7 +351,7 @@ public class Model {
 	/**
 	 * Stop applying action to focused object
 	 */
-	void unaction(String name) {
+	public void unaction(String name) {
 		FgRunnable action = actionMap.get(name);
 		// check for null as we won't get a null pointer exception otherwise
 		if (action == null) {
@@ -309,7 +371,8 @@ public class Model {
 	
 	/** add foreground object with given identifier, sets the model of the object */
 	public void addFgObject(FgObject obj, int id) {
-		obj.setModel(this, id);
+		obj.setModel(this);
+		obj.setId(id);
 		objects.add(obj);
 	}
 	
@@ -325,17 +388,22 @@ public class Model {
 		System.out.println("could not find object " + id);
 	}
 	
+	private int transIdSeq = 0;
+	
 	/**
 	 * Add a transient object, optionally sending to server
 	 */
 	public void addTransObject(TransObject obj, boolean send) {
-		obj.setModel(this, -1);
+		obj.setModel(this);
 		transObjects.add(0, obj);
 		if (obj instanceof BulletObject) {
 			transMap.add((BulletObject) obj);
 		}
 		if (send && server != null && obj instanceof BulletObject) {
-			server.sendFire((BulletObject)obj);
+			obj.setId(id * 1000 + transIdSeq);
+			transIdSeq = (transIdSeq + 1) % 1000;
+			//server.sendFire((BulletObject)obj);
+			server.send(ServerCommands.FIREREQ, obj);
 		}
 	}
 	
@@ -351,13 +419,16 @@ public class Model {
 	public void foregroundCollision(ShipObject ship) {
 		ArrayList<BulletObject> l = transMap.get(ship.getX(), ship.getY(), ship.getRadius());
 		if (l != null) {
-			for (TransObject obj : l) {
+			for (BulletObject obj : l) {
 				if (obj.getFreq() != ship.getFreq()) {
-					// FIXME set remove, do something interesting
-					System.out.println("impact!!");
+					//System.out.println("impact!!");
+					obj.collided = true;
+					// 
 				}
 			}
 		}
+		
+		
 	}
 	
 	public void setServer(ServerRunnable server) {
@@ -371,7 +442,8 @@ public class Model {
 	
 	public void updateMapTile(int x, int y, int action) {
 		if (server != null) {
-			server.sendMapTileReq(x, y, action);
+			//server.sendMapTileReq(x, y, action);
+			server.send(ServerCommands.MAPTILEREQ, x, y, action);
 		} else {
 			map.updateMapTile(x, y, action);
 		}

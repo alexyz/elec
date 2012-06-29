@@ -15,7 +15,7 @@ public class ExplodeObject extends TransObject {
 	@Override
 	public void paint(Graphics2D g, float p) {
 		g.setColor(new Color(1f, 1f - p, 0f, 1f - p));
-		int r = (int) (c.r * p);
+		int r = (int) (c.r + (c.r * 4 * p));
 		g.fillOval(-r, -r, r*2, r*2);
 	}
 }

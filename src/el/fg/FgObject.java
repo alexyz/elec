@@ -18,6 +18,7 @@ public abstract class FgObject {
 	/**
 	 * Location of object
 	 */
+	// TODO subclass circle instead?
 	protected final Circle c;
 	/**
 	 * Model of this object.
@@ -38,6 +39,11 @@ public abstract class FgObject {
 	
 	/** update object from string */
 	public void read(StringTokenizer tokens) {
+		int id = Integer.parseInt(tokens.nextToken());
+		if (this.id != 0 && this.id != id) {
+			throw new RuntimeException("received new id");
+		}
+		this.id = id;
     	c.x = Float.parseFloat(tokens.nextToken());
 		c.y = Float.parseFloat(tokens.nextToken());
 		c.r = Float.parseFloat(tokens.nextToken());
@@ -45,6 +51,7 @@ public abstract class FgObject {
     
 	/** write object to string */
     public StringBuilder write(StringBuilder sb) {
+    	sb.append(id).append(" ");
     	sb.append(c.x).append(" ");
     	sb.append(c.y).append(" ");
     	sb.append(c.r).append(" ");
@@ -83,10 +90,16 @@ public abstract class FgObject {
 	}
 	
 	/**
-	 * Set the model and identifier of the object
+	 * Set the model of the object
 	 */
-	public final void setModel(Model model, int id) {
+	public final void setModel(Model model) {
 		this.model = model;
+	}
+	
+	/**
+	 * Set the unique identifier of the object
+	 */
+	public final void setId(int id) {
 		this.id = id;
 	}
 	

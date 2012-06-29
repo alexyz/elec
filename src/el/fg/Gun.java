@@ -2,7 +2,7 @@ package el.fg;
 
 import java.awt.Color;
 
-
+@Deprecated
 public class Gun {
 	static final Color[] colours = {
 		new Color(1f, 0f, 0f),
@@ -11,6 +11,7 @@ public class Gun {
 		new Color(1f, 0f, 1f)
 	};
 	
+	@Deprecated
 	public enum Type {
 		gun1(0, 2, 2),
 		gun2(1, 2, 2),
@@ -31,11 +32,14 @@ public class Gun {
 		}
 	}
 	
+	final Type type;
 	final Mount[] mounts;
 	final float period;
 	final float velocity;
-	final Type type;
-	Gun(Type type, float period, float velocity, Mount... mounts) {
+	final float damage;
+	
+	Gun(Type type, float damage, float period, float velocity, Mount... mounts) {
+		this.damage = damage;
 		this.period = period;
 		this.velocity = velocity;
 		this.type = type;

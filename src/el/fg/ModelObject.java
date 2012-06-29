@@ -10,6 +10,7 @@ import el.phys.Circle;
 public class ModelObject extends FgObject {
 	public ModelObject() {
 		super(new Circle(Model.centrex, Model.centrey, 0));
+		setId(-1);
 	}
 	@Override
 	public void down() {

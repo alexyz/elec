@@ -16,6 +16,8 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
+import el.serv.ServerCommands;
+
 
 public class ClientMain {
 	
@@ -143,7 +145,7 @@ public class ClientMain {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (server != null) {
-					server.sendEnterReq();
+					server.send(ServerCommands.ENTERREQ);
 				} else {
 					JOptionPane.showMessageDialog(frame, "Not connected");
 				}
@@ -157,22 +159,12 @@ public class ClientMain {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (server != null) {
-					server.sendSpec();
+					server.send(ServerCommands.SPEC);
 					// wait for server?
 					//model.spec();
 				} else {
 					JOptionPane.showMessageDialog(frame, "Not connected");
 				}
-			}
-		});
-		
-		JMenuItem enterMenuItem = new JMenuItem("Enter");
-		enterMenuItem.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				model.setId(0, "self");
-				model.enter(model.getId(), 1);
-				out.println("view request focus: " + view.requestFocusInWindow());
 			}
 		});
 		
@@ -182,7 +174,6 @@ public class ClientMain {
 		serverMenu.add(specMenuItem);
 		
 		JMenu localMenu = new JMenu("Local");
-		localMenu.add(enterMenuItem);
 		
 		JMenuBar menuBar = new JMenuBar();
 		menuBar.add(serverMenu);

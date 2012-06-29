@@ -26,19 +26,25 @@ public class ShipObject extends MovingObject {
 	/**
 	 * Guns and mountings
 	 */
+	@Deprecated
 	private final Gun[] guns;
 	/**
 	 * ships energy
 	 */
 	private float energy = 2000f;
+	@Deprecated
+	private float maxenergy = 2000f;
+	@Deprecated
+	private float recharge = 100f;
 	/**
 	 * last time thrusters were drawn
 	 */
 	private float thrusttime;
 	
-	public ShipObject(ShipType type, int mx, int my) {
+	public ShipObject(ShipType type, float mx, float my) {
 		super(new Circle(mx, my, 24));
 		
+		// this should really be cloned from shiptype
 		image = ClientMain.getImage(type.img);
 		maxv = type.maxv;
 		xres = type.xres;
@@ -63,6 +69,8 @@ public class ShipObject extends MovingObject {
 	@Override
 	public void update(float floatTime, float floatTimeDelta) {
 		super.update(floatTime, floatTimeDelta);
+		energy = Math.min(energy + recharge * floatTimeDelta, maxenergy); 
+		// don't really need this
 		model.foregroundCollision(this);
 	}
 	
@@ -71,6 +79,12 @@ public class ShipObject extends MovingObject {
 		int r = (int) c.r;
 		g.setColor(Color.gray);
 		g.drawOval(-r, -r, r*2, r*2);
+		
+		if (energy < maxenergy) {
+			g.setColor(Color.orange);
+			g.drawString(String.format("%.1f", energy), r, -r);
+		}
+		
 		g.rotate(f);
 		g.drawImage(image,(int)-c.r,(int)-c.r,null);
 	}
@@ -132,6 +146,14 @@ public class ShipObject extends MovingObject {
 				}
 			}
 		}
+	}
+	
+	public void setEnergy(float energy) {
+		this.energy = energy;
+	}
+	
+	public float getEnergy() {
+		return energy;
 	}
 	
 	@Override

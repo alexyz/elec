@@ -6,11 +6,14 @@ import java.util.StringTokenizer;
 import el.phys.Circle;
 
 /**
- * Bomb or bullet
+ * Bomb or bullet, subclass of TransObject
  */
 public class BulletObject extends TransObject {
 	
 	static final float lifet = 3f;
+	
+	public boolean collided;
+	public boolean hitSent;
 	
 	private Gun.Type type;
 	
@@ -48,11 +51,8 @@ public class BulletObject extends TransObject {
 		if (hit == 1) {
 			reflect = false;
 		} else if (hit > 1) {
-			// TODO fire explosion transient?
 			remove = true;
-			ExplodeObject ex = new ExplodeObject(c.x, c.y, c.r * 3, model.getTime());
-			// FIXME concurrent mod ex
-			//model.addTransObject(ex, false);
+			// FIXME explode on model
 		}
 	}
 	
@@ -69,6 +69,11 @@ public class BulletObject extends TransObject {
 		if (p > r) {
 			g.setColor(Color.darkGray);
 			g.drawOval(-p, -p, p*2, p*2);
+		}
+		
+		if (collided) {
+			g.setColor(Color.orange);
+			g.drawString("hit",0,0);
 		}
 	}
 	

@@ -4,6 +4,7 @@ import java.util.*;
 import java.io.*;
 import java.net.*;
 
+import el.Model;
 import el.bg.MapBgObject;
 
 /**
@@ -86,6 +87,7 @@ public class ServerMain {
 					out.println("adding " + client);
 					clients.add(client);
 				}
+				// XXX need to wrap nextClientId 
 			}
 			
 		} catch (Exception e) {
@@ -115,9 +117,14 @@ public class ServerMain {
 			}
 		}
 		
+		float x = Model.centrex + (float) (Math.random() * 640 - 320);
+		float y = Model.centrey + (float) (Math.random() * 480 - 240);
+		boolean msg = true;
+		
+		sendAll(ClientCommands.ENTER, client.id, minFreq, x, y, msg);
+		
 		client.freq = minFreq;
 		client.entered = true;
-		sendAll(ClientCommands.ENTER, client.id, minFreq);
 	}
 	
 	/** tell all clients the client has begun spectating */
@@ -129,6 +136,11 @@ public class ServerMain {
 	
 	/** update the state of the client object on the other clients */
 	public void clientUpdate(ClientThread client, String data) {
+		if (!client.entered) {
+			out.println("client " + client + " not entered!!");
+			client.send(ClientCommands.TALK, 0, "you are not entered");
+			return;
+		}
 		synchronized (clients) {
 			for (ClientThread c : clients) {
 				if (c != client) {
@@ -154,7 +166,8 @@ public class ServerMain {
 					client.send(ClientCommands.CONNECTED, c.id, c.name);
 					
 					if (c.entered) {
-						client.send(ClientCommands.ENTER, c.id, c.freq);
+						// FIXME don't know position
+						client.send(ClientCommands.ENTER, c.id, c.freq, 1000, 1000, false);
 					}
 				}
 			}
@@ -213,5 +226,17 @@ public class ServerMain {
 		sendAll(ClientCommands.TALK, client.id, str);
 	}
 	
+	public void clientHit(ClientThread client, int transId) {
+		sendAll(ClientCommands.EXPLODE, transId);
+	}
+	
+	public void clientKilled(ClientThread client, int killerId, float x, float y) {
+		sendAll(ClientCommands.KILL, client.id, killerId, x, y);
+		float newx = Model.centrex + (float) (Math.random() * 640 - 320);
+		float newy = Model.centrey + (float) (Math.random() * 480 - 240);
+		// really needs to send delay
+		sendAll(ClientCommands.ENTER, client.id, client.freq, newx, newy, false);
+		
+	}
 	
 }

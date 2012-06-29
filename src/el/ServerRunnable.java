@@ -7,6 +7,7 @@ import java.util.StringTokenizer;
 import javax.swing.JOptionPane;
 
 import el.fg.BulletObject;
+import el.fg.FgObject;
 import el.fg.ShipObject;
 import el.serv.ClientCommands;
 import el.serv.ServerCommands;
@@ -47,7 +48,7 @@ public class ServerRunnable implements Runnable {
 	public void run() {
 		try {
 			// have to send name on connect
-			sendName(name);
+			send(ServerCommands.NAME, name);
 
 			// read commands from server...
 			String line;
@@ -69,6 +70,21 @@ public class ServerRunnable implements Runnable {
 					synchronized (model) {
 						model.addTransObject(bullet, false);
 					}
+					
+				} else if (cmd.equals(ClientCommands.EXPLODE)) {
+					int transId = Integer.parseInt(tokens.nextToken());
+					synchronized (model) {
+						model.explode(transId);
+					}
+					
+				} else if (cmd.equals(ClientCommands.KILL)) {
+					int id = Integer.parseInt(tokens.nextToken());
+					int killerId = Integer.parseInt(tokens.nextToken());
+					float x = Float.parseFloat(tokens.nextToken());
+					float y = Float.parseFloat(tokens.nextToken());
+					synchronized (model) {
+						model.killed(id, killerId, x, y);
+					}
 
 				} else if (cmd.equals(ClientCommands.TIME)) {
 					// TODO measure latency from connect to here
@@ -83,8 +99,12 @@ public class ServerRunnable implements Runnable {
 				} else if (cmd.equals(ClientCommands.ENTER)) {
 					int id = Integer.parseInt(tokens.nextToken());
 					int freq = Integer.parseInt(tokens.nextToken());
+					float x = Float.parseFloat(tokens.nextToken());
+					float y = Float.parseFloat(tokens.nextToken());
+					boolean msg = Boolean.parseBoolean(tokens.nextToken());
+					
 					synchronized (model) {
-						model.enter(id, freq);
+						model.enter(id, freq, x, y, msg);
 					}
 
 				} else if (cmd.equals(ClientCommands.SPEC)) {
@@ -139,7 +159,7 @@ public class ServerRunnable implements Runnable {
 				}
 			}
 
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace(out);
 			JOptionPane.showMessageDialog(ClientMain.frame, 
 					e.toString() + ": " + e.getMessage(), 
@@ -156,13 +176,6 @@ public class ServerRunnable implements Runnable {
 	}
 
 	/**
-	 * send name. this must be first command and can only be sent once.
-	 */
-	public void sendName(String name) {
-		send(ServerCommands.NAME, name);
-	}
-
-	/**
 	 * Get current server time (doesn't call server).
 	 * Server time starts at 0.
 	 */
@@ -170,53 +183,75 @@ public class ServerRunnable implements Runnable {
 		long t = System.nanoTime();
 		return serverTime + t - clientTime;
 	}
-
-	/**
-	 * Send enter request to server
-	 */
-	public void sendEnterReq() {
-		send(ServerCommands.ENTERREQ);
-	}
-
-	/**
-	 * Send spectate to server
-	 */
-	public void sendSpec() {
-		send(ServerCommands.SPEC);
-	}
-
-	/**
-	 * send map update request to server
-	 */
-	public void sendMapTileReq(int x, int y, int act) {
-		send(ServerCommands.MAPTILEREQ, x, y, act);
-	}
-
-	public void sendFire(BulletObject bullet) {
-		send(ServerCommands.FIREREQ, bullet.write(new StringBuilder()));
-	}
-
-	/**
-	 * Send ship update to server
-	 */
-	public void sendUpdate(ShipObject ship) {
-		send(ServerCommands.UPDATE, ship.write(new StringBuilder()));
-	}
-
-	/**
-	 * send the client talk msg to the server
-	 */
-	public void sendTalkReq(String msg) {
-		send(ServerCommands.TALKREQ, msg);
-	}
-
+	
+//	/**
+//	 * send name. this must be first command and can only be sent once.
+//	 */
+//	public void sendName(String name) {
+//		send(ServerCommands.NAME, name);
+//	}
+//	
+//	/**
+//	 * Send enter request to server
+//	 */
+//	public void sendEnterReq() {
+//		send(ServerCommands.ENTERREQ);
+//	}
+//	
+//	/**
+//	 * Send spectate to server
+//	 */
+//	public void sendSpec() {
+//		send(ServerCommands.SPEC);
+//	}
+//	
+//	/**
+//	 * send map update request to server
+//	 */
+//	public void sendMapTileReq(int x, int y, int act) {
+//		send(ServerCommands.MAPTILEREQ, x, y, act);
+//	}
+//	
+//	public void sendFire(BulletObject bullet) {
+//		send(ServerCommands.FIREREQ, bullet.write(new StringBuilder()));
+//	}
+//	
+//	/**
+//	 * Send ship update to server
+//	 */
+//	public void sendUpdate(ShipObject ship) {
+//		send(ServerCommands.UPDATE, ship.write(new StringBuilder()));
+//	}
+//	
+//	/**
+//	 * send the client talk msg to the server
+//	 */
+//	public void sendTalkReq(String msg) {
+//		send(ServerCommands.TALKREQ, msg);
+//	}
+//	
+//	/**
+//	 * send trans collision to server
+//	 */
+//	public void sendHit(int transId) {
+//		send(ServerCommands.HIT, transId);
+//	}
+//	
+//	public void sendKilled() {
+//		send(ServerCommands.KILLED);
+//	}
+	
 	/** send command to server */
-	private void send(String command, Object... args) {
+	public void send(String command, Object... args) {
 		StringBuilder sb = new StringBuilder();
 		sb.append(command);
 		for (Object o : args) {
 			sb.append(" ");
-			sb.append(o);
+			if (o instanceof FgObject) {
+				((FgObject)o).write(sb);
+			} else {
+				sb.append(o);
+			}
 		}
 		serverOut.println(sb);
 		serverOut.flush();

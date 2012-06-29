@@ -3,11 +3,11 @@ package el.serv;
 /**
  * Commands sent from server to client
  */
-public class ClientCommands {
+public interface ClientCommands {
 
 	/** tell client new server time (long) */
 	public static final String TIME = "time";
-	/** tell client with id to enter (int) */
+	/** tell client with id to enter (int id, int freq, float x, float y, boolean msg) */
 	public static final String ENTER = "enter";
 	/** tell client to spectate (int) */
 	public static final String SPEC = "spectate";
@@ -27,5 +27,8 @@ public class ClientCommands {
 	public static final String CONNECTED = "connected";
 	/** tell client someone has exited (int id) */
 	public static final String EXIT = "exited";
-	
+	/** tell client the bullet has exploded (int transid) */
+	public static final String EXPLODE = "explode";
+	/** tell client someone was killed (int id, int killerId, float x, float y) */
+	public static final String KILL = "kill";
 }

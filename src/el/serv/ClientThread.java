@@ -74,6 +74,16 @@ public class ClientThread extends Thread {
 				} else if (cmd.equals(ServerCommands.FIREREQ)) {
 					server.clientFireReq(this, line.substring(line.indexOf(" ") + 1));
 					
+				} else if (cmd.equals(ServerCommands.HIT)) {
+					int transId = Integer.parseInt(tokens.nextToken());
+					server.clientHit(this, transId);
+					
+				} else if (cmd.equals(ServerCommands.KILLED)) {
+					int killerId = Integer.parseInt(tokens.nextToken());
+					float x = Float.parseFloat(tokens.nextToken());
+					float y = Float.parseFloat(tokens.nextToken());
+					server.clientKilled(this, killerId, x, y);
+					
 				} else if (cmd.equals(ServerCommands.TALKREQ)) {
 					String msg = line.substring(line.indexOf(" ") + 1).trim();
 					if (msg.length() > 0) {

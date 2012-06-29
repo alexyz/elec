@@ -88,14 +88,14 @@ class CanvasView extends Canvas {
 	 * Get the model x co-ordinate of 0,0 in the view
 	 */
 	private int getModelX() {
-		return model.getX() - getWidth() / 2;
+		return model.getFocus().getX() - getWidth() / 2;
 	}
 	
 	/**
 	 * Get the model y co-ordinate of 0,0 in the view
 	 */
 	private int getModelY() {
-		return model.getY() - getHeight() / 2;
+		return model.getFocus().getY() - getHeight() / 2;
 	}
 	
 	@Override
@@ -189,7 +189,7 @@ class CanvasView extends Canvas {
 		int lh = g.getFontMetrics().getHeight();
 		g.setColor(Color.lightGray);
 		
-		/*
+		
 		long fm = Runtime.getRuntime().freeMemory();
 		int delay = ClientMain.getDelay();
 		float fps = 1000f / delay;
@@ -198,7 +198,7 @@ class CanvasView extends Canvas {
 				delay, fps, 
 				ClientMain.renderTime / 1000000.0, ClientMain.freeTime / 1000000.0, 
 				fm / 1000000.0), 5, lh + 5);
-		*/
+		
 		g.drawString(toString(), 5, lh * 2 + 5);
 		g.drawString(model.toString(), 5, lh * 3 + 5);
 		g.drawString(String.valueOf(model.getFocus()), 5, lh * 4 + 5);
