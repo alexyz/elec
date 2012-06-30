@@ -29,34 +29,24 @@ public class Model implements ClientCommands {
 	
 	/** Nanoseconds in second */
 	private static final float NS_IN_S = 1000000000.0f;
-
 	/** centre co-ordinates */
-	public static final int centrex = 500000, centrey = 500000;
+	public static final int centrex = 500000, centrey = 500000, maxx = 1000000, maxy = 1000000;
 	
 	//
 	// final fields
 	//
 	
-	/**
-	 * permanent foreground objects (ships)
-	 */
+	/** permanent foreground objects (ships) */
 	private final ArrayList<FgObject> objects = new ArrayList<FgObject>();
-	/**
-	 * transient foreground objects (bullets)
-	 */
+	/** transient foreground objects (bullets) */
 	private final ArrayList<TransObject> transObjects = new ArrayList<TransObject>();
 	private final QuadMap<BulletObject> transMap = new QuadMap<BulletObject>(new BulletQuadMapKey());
 	private final ActionMap actionMap = new ActionMap();
 	private final ArrayList<FgRunnable> actions = new ArrayList<FgRunnable>();
 	private final ModelObject modelObj = new ModelObject();
-	private final long startTime = System.nanoTime();
-	/**
-	 * The map (transients may collide with it)
-	 */
+	/** The map (fg objects and transients may collide with it) */
 	private final MapBgObject map = new MapBgObject();
-	/**
-	 * The background (non interacting)
-	 */
+	/** The background (non interacting) */
 	private final StarBgObject stars = new StarBgObject();
 	private final List<BgObject> bgObjects = Arrays.asList(stars, map);
 	/** talk messages from server */
@@ -68,34 +58,27 @@ public class Model implements ClientCommands {
 	// mutable fields
 	//
 	
-	private long serverTime, clientTime;
-	/**
-	 * time of last call to update
-	 */
+	/** server time at the last time it was set (nanoseconds) */
+	private long serverNanoTime;
+	/** client time at the last time the server time was set, or model was created (nanoseconds) */
+	private long clientNanoTime;
+	/** time of last call to update (seconds) */
 	private float updateTime;
-	/**
-	 * time the last focus object update was sent to server
-	 */
-	private float lastUpdate;
-	/**
-	 * Issue a focused object server update on next call to update()
-	 */
+	/** time the last focus object update was sent to server (seconds) */
+	private float serverUpdateTime;
+	/** time of last call to ping() */
+	private long pingNanoTime;
+	/** Issue a ship server update on next call to update() */
 	private boolean forceUpdate;
-	/**
-	 * currently focused object
-	 */
+	/** currently focused object */
 	private FgObject focusObj = modelObj;
-	/**
-	 * the server, if any
-	 */
+	/** the server, if any */
 	private ServerRunnable server;
-	/**
-	 * users id, also used for ship
-	 */
+	/** users id, also used for ship */
 	private int id;
 	
 	public Model() {
-		//
+		clientNanoTime = System.nanoTime();
 	}
 	
 	@Override
@@ -110,8 +93,10 @@ public class Model implements ClientCommands {
 	
 	@Override
 	public void setTime(long time) {
-		serverTime = time;
-		clientTime = System.nanoTime();
+		System.out.println("server time is " + time / NS_IN_S);
+		serverNanoTime = time;
+		clientNanoTime = System.nanoTime();
+		updateTime = serverNanoTime / NS_IN_S;
 	}
 	
 	public void sendMsg(String msg) {
@@ -167,8 +152,8 @@ public class Model implements ClientCommands {
 		}
 		if (focusObj != null && focusObj.getId() == id) {
 			// move spec view to point of explosion
-			modelObj.getPosition().x = focusObj.getPosition().x;
-			modelObj.getPosition().y = focusObj.getPosition().y;
+			modelObj.x = focusObj.x;
+			modelObj.y = focusObj.y;
 			focusObj = modelObj;
 		}
 	}
@@ -193,6 +178,8 @@ public class Model implements ClientCommands {
 			throw new RuntimeException();
 		}
 		ShipObject ship = new ShipObject(ShipType.types[0], x, y);
+		System.out.println("new ship: " + ship);
+		System.out.println("ship.x=" + ship.x + " ship.getx=" + ship.getX());
 		ship.setFreq(freq);
 		if (this.id == id) {
 			// TODO need to put focused object on top
@@ -235,17 +222,22 @@ public class Model implements ClientCommands {
 	 * update the world
 	 */
 	public void update() {
-		
+		// calculate time and delta time
 		float floatTime, floatTimeDelta;
 		if (server != null) {
-			//floatTime = server.getTime() / NS_IN_S;
-			long t = serverTime + System.nanoTime() - clientTime;
+			long t = serverNanoTime + System.nanoTime() - clientNanoTime;
 			floatTime = t / NS_IN_S;
 			floatTimeDelta = floatTime - this.updateTime;
-			
 		} else {
-			floatTime = (System.nanoTime() - this.startTime) / NS_IN_S;
+			floatTime = (System.nanoTime() - this.clientNanoTime) / NS_IN_S;
 			floatTimeDelta = floatTime - this.updateTime;
+		}
+		
+		// validate times
+		if (floatTimeDelta > 10f) {
+			System.out.println("server time is " + (serverNanoTime / NS_IN_S));
+			System.out.println("client time is " + ((System.nanoTime() - clientNanoTime) / NS_IN_S));
+			throw new RuntimeException("unexpected time " + floatTime + " delta " + floatTimeDelta);
 		}
 		
 		this.updateTime = floatTime;
@@ -255,7 +247,7 @@ public class Model implements ClientCommands {
 			for (FgRunnable r : actions) {
 				r.run(focusObj);
 			}
-			if ((floatTime - lastUpdate) > 0.125) {
+			if ((floatTime - serverUpdateTime) > 0.125) {
 				forceUpdate = true;
 			}
 		}
@@ -305,19 +297,17 @@ public class Model implements ClientCommands {
 			}
 			if (s.getEnergy() < 0) {
 				// wait for server to send message back for explosion
-				server.getProxy().playerKilled(killerId, focusObj.getPosition().x, focusObj.getPosition().y);
+				server.getProxy().playerKilled(killerId, focusObj.x, focusObj.y);
 			}
 		}
 		
 		// send to server - after possible reflect
 		if (server != null && focusObj instanceof ShipObject && forceUpdate) {
 			// update focused ship on server
-			server.getProxy().update(focusObj.write(new StringBuilder()).toString());
-			
-			lastUpdate = floatTime;
+			server.getProxy().update(focusObj.write());
+			serverUpdateTime = floatTime;
 			forceUpdate = false;
 		}
-		
 		
 	}
 	
@@ -404,7 +394,7 @@ public class Model implements ClientCommands {
 		// focused object could be updated if spectating someone else
 		for (FgObject obj : objects) {
 			if (obj.getId() == id) {
-				obj.read(new StringTokenizer(data));
+				obj.read(data);
 				return;
 			}
 		}
@@ -414,9 +404,9 @@ public class Model implements ClientCommands {
 	private int transIdSeq = 0;
 	
 	@Override
-	public void addBullet(int freq, String data) {
-		BulletObject bullet = new BulletObject(new StringTokenizer(data));
-		bullet.setFreq(freq);
+	public void addBullet(String data) {
+		BulletObject bullet = new BulletObject();
+		bullet.read(data);
 		addTransObject(bullet, false);
 	}
 	
@@ -432,13 +422,13 @@ public class Model implements ClientCommands {
 		if (send && server != null && obj instanceof BulletObject) {
 			obj.setId(id * 1000 + transIdSeq);
 			transIdSeq = (transIdSeq + 1) % 1000;
-			server.getProxy().addBullet(obj.write(new StringBuilder()).toString());
+			server.getProxy().addBullet(obj.write());
 		}
 	}
 	
 	public Intersection backgroundCollision(FgObject obj, float tx, float ty) {
 		// check collision with map
-		Intersection r = map.intersects(obj.getPosition(), tx, ty);
+		Intersection r = map.intersects(obj, tx, ty);
 		if (r != null && obj == focusObj) {
 			forceUpdate = true;
 		}
@@ -460,8 +450,11 @@ public class Model implements ClientCommands {
 	}
 	
 	public void setServer(ServerRunnable server) {
-		// TODO should probably clear here, or pass in constructor
+		// should probably clear here, or pass in constructor
 		this.server = server;
+		if (objects.size() > 0) {
+			throw new RuntimeException();
+		}
 	}
 	
 	public MapBgObject getMap() {
@@ -486,12 +479,23 @@ public class Model implements ClientCommands {
 		map.setMapTile(x, y, action);
 	}
 	
+	public void ping() {
+		pingNanoTime =  System.nanoTime();
+		server.getProxy().ping();
+	}
+	
+	@Override
+	public void pong() {
+		long t = System.nanoTime() - pingNanoTime;
+		System.out.println("ping: " + (t / NS_IN_S));
+	}
+	
 	@Override
 	public String toString() {
-		return String.format("Model[id=%d pos=%s objs=%d,%d t=%.1f %s]", 
+		return String.format("Model[id=%d objs=%d,%d tm=%s t=%.1f %s]", 
 				id,
-				focusObj.getPosition(),
 				objects.size(), transObjects.size(), 
+				transMap,
 				updateTime, 
 				actions);
 	}

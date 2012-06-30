@@ -5,12 +5,8 @@ import java.util.*;
 /**
  * A map of integer XY co-ordinates from 0-1M to list of objects.
  * Objects can be retrieved by proximity to a point.
- * 
- * Note: there should be NO autoboxing in this class.
- * 
- * TODO some method to get objs within square rather than within radius? for
- * benefit of map tiles
  */
+// Note: there should be NO autoboxing in this class.
 public class QuadMap<T> {
 	
 	/** interface for getting the x, y and radius of and object in the map */
@@ -149,6 +145,10 @@ public class QuadMap<T> {
 		final int xqh = quad(x + r);
 		final int yql = quad(y - r);
 		final int yqh = quad(y + r);
+		if (xql < 0 || xql > ints.length || yql < 0 || yqh > ints.length) {
+			throw new RuntimeException(String.format("quadmap get out of bounds: %d, %d, %d", x, y, r));
+		}
+		
 		ArrayList<T> ret = null;
 		
 		for (int xq = xql; xq <= xqh; xq++) {

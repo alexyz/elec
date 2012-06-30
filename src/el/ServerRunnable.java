@@ -2,6 +2,7 @@ package el;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.Charset;
 
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
@@ -18,8 +19,7 @@ public class ServerRunnable implements Runnable {
 	private static final PrintStream out = System.out;
 
 	private final Socket socket;
-	private final BufferedReader serverIn;
-	private final PrintWriter serverOut;
+	private final BufferedReader br;
 	private final Model model;
 	private final String name;
 	private final ServerCommands proxy;
@@ -28,9 +28,12 @@ public class ServerRunnable implements Runnable {
 		this.socket = socket;
 		this.model = model;
 		this.name = name;
-		this.serverIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-		this.serverOut = new PrintWriter(socket.getOutputStream());
-		this.proxy = TextProxy.createProxy(ServerCommands.class, this.serverOut);
+		// create input/output here so it is less likely to throw exception in run
+		OutputStreamWriter osw = new OutputStreamWriter(socket.getOutputStream(), Charset.forName("UTF-8"));
+		PrintWriter pw = new PrintWriter(osw);
+		this.proxy = TextProxy.createProxy(ServerCommands.class, pw);
+		InputStreamReader isr = new InputStreamReader(socket.getInputStream(), Charset.forName("UTF-8"));
+		this.br = new BufferedReader(isr);
 	}
 	
 	/**
@@ -48,33 +51,35 @@ public class ServerRunnable implements Runnable {
 
 			// read commands from server...
 			String line;
-			while ((line = serverIn.readLine()) != null) {
+			while ((line = br.readLine()) != null) {
 				out.println("server: " + line);
 				final String fline = line;
+				// put on event queue so we don't have to synchronize model
 				SwingUtilities.invokeLater(new Runnable() {
 					@Override
 					public void run() {
-						TextProxy.unproxy(ClientCommands.class, model, fline);
+						try {
+							TextProxy.unproxy(ClientCommands.class, model, fline);
+						} catch (Exception e) {
+							e.printStackTrace(out);
+							ClientMain.handleException("Unproxy", e);
+						}
 					}
 				});
 			}
 
 		} catch (Exception e) {
 			e.printStackTrace(out);
-			JOptionPane.showMessageDialog(ClientMain.frame, 
-					e.toString() + ": " + e.getMessage(), 
-					"Server Thread Exception", 
-					JOptionPane.ERROR_MESSAGE);
+			ClientMain.handleException("Server", e);
 		}
 
-		model.setServer(null);
 		try {
 			socket.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		ClientMain.disconnect();
 	}
-
-	
 	
 }

@@ -20,7 +20,7 @@ public interface ClientCommands {
 	/** tell client to update map tile */
 	public void setMapTile(int x, int y, int action);
 	/** tell client to add bullet */
-	public void addBullet(int freq, String data);
+	public void addBullet(String data);
 	/** send chat to client */
 	public void addMsg(int id, String msg);
 	/** tell client someone has connected - should send update in response */
@@ -31,5 +31,6 @@ public interface ClientCommands {
 	public void bulletExploded(int transid);
 	/** tell client someone was killed */
 	public void playerKilled(int id, int killerId, float x, float y);
-	
+	/** ping received */
+	public void pong();
 }

@@ -187,14 +187,14 @@ class CanvasView extends Canvas {
 		int lh = g.getFontMetrics().getHeight();
 		g.setColor(Color.lightGray);
 		
+		g.drawLine(0,0,(int)(getWidth() * ClientMain.busy),0);
 		
 		long fm = Runtime.getRuntime().freeMemory();
 		int delay = ClientMain.getDelay();
 		float fps = 1000f / delay;
 		
-		g.drawString(String.format("Main[delay=%dms fps=%.1f busy=%.0fms wait=%.0fms freemem=%.0fMB]",
+		g.drawString(String.format("Main[delay=%dms fps=%.1f freemem=%.0fMB]",
 				delay, fps, 
-				ClientMain.renderTime / 1000000.0, ClientMain.freeTime / 1000000.0, 
 				fm / 1000000.0), 5, lh + 5);
 		
 		g.drawString(toString(), 5, lh * 2 + 5);

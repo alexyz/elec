@@ -42,7 +42,9 @@ public class ShipObject extends MovingObject {
 	private float thrusttime;
 	
 	public ShipObject(ShipType type, float mx, float my) {
-		super(new Circle(mx, my, 24));
+		this.x = mx;
+		this.y = my;
+		this.radius = 24;
 		
 		// this should really be cloned from shiptype
 		image = ClientMain.getImage(type.img);
@@ -54,14 +56,14 @@ public class ShipObject extends MovingObject {
 	}
 	
 	@Override
-	public void read(StringTokenizer tokens) {
-		super.read(tokens);
+	protected void readImpl(StringTokenizer tokens) {
+		super.readImpl(tokens);
 		energy = Float.parseFloat(tokens.nextToken());
 	}
 	
 	@Override
-	public StringBuilder write(StringBuilder sb) {
-		super.write(sb);
+	protected StringBuilder writeImpl(StringBuilder sb) {
+		super.writeImpl(sb);
 		sb.append(energy).append(" ");
 		return sb;
 	}
@@ -76,7 +78,7 @@ public class ShipObject extends MovingObject {
 	
 	@Override
 	protected void paintAuto(Graphics2D g) {
-		int r = (int) c.r;
+		int r = (int) radius;
 		g.setColor(Color.gray);
 		g.drawOval(-r, -r, r*2, r*2);
 		
@@ -86,7 +88,7 @@ public class ShipObject extends MovingObject {
 		}
 		
 		g.rotate(f);
-		g.drawImage(image,(int)-c.r,(int)-c.r,null);
+		g.drawImage(image,(int)-radius,(int)-radius,null);
 	}
 	
 	@Override

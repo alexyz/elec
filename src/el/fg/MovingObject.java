@@ -3,6 +3,7 @@ import static el.phys.FloatMath.*;
 
 import java.util.StringTokenizer;
 
+import el.Model;
 import el.phys.Circle;
 import el.phys.Intersection;
 
@@ -57,11 +58,8 @@ public abstract class MovingObject extends FgObject  {
 	 */
 	protected int freq;
 	
-	/**
-	 * Create object with given location and radius
-	 */
-	public MovingObject(Circle c) {
-		super(c);
+	public MovingObject() {
+		//
 	}
 	
 	public void setFreq(int freq) {
@@ -73,8 +71,10 @@ public abstract class MovingObject extends FgObject  {
 	}
 	
 	@Override
-	public void read(StringTokenizer tokens) {
-		super.read(tokens);
+	protected void readImpl(StringTokenizer tokens) {
+		super.readImpl(tokens);
+		// should really validate freq changes
+		freq = Integer.parseInt(tokens.nextToken());
 		vx = Float.parseFloat(tokens.nextToken());
 		vy = Float.parseFloat(tokens.nextToken());
 		fd = Float.parseFloat(tokens.nextToken());
@@ -82,8 +82,9 @@ public abstract class MovingObject extends FgObject  {
 	}
 	
 	@Override
-	public StringBuilder write(StringBuilder sb) {
-		super.write(sb);
+	protected StringBuilder writeImpl(StringBuilder sb) {
+		super.writeImpl(sb);
+		sb.append(freq).append(" ");
 		sb.append(vx).append(" ");
 		sb.append(vy).append(" ");
 		sb.append(fd).append(" ");
@@ -117,16 +118,16 @@ public abstract class MovingObject extends FgObject  {
 		if (collideBackground && (r = model.backgroundCollision(this, dx, dy)) != null) {
 			if (reflect) {
 				// reflected position
-				c.x += r.rtx;
-				c.y += r.rty;
+				x += r.rtx;
+				y += r.rty;
 				// change velocity direction
 				vx *= r.vx;
 				vy *= r.vy;
 				
 			} else {
 				// hit position
-				c.x += r.itx;
-				c.y += r.ity;
+				x += r.itx;
+				y += r.ity;
 				// zero velocity
 				vx = 0f;
 				vy = 0f;
@@ -137,8 +138,12 @@ public abstract class MovingObject extends FgObject  {
 			
 		} else {
 			// just update the position
-			c.x += dx;
-			c.y += dy;
+			x += dx;
+			y += dy;
+		}
+		
+		if (x < 0 || x > Model.maxx || y < 0 || y > Model.maxx) {
+			throw new RuntimeException("object out of bounds");
 		}
 		
 		// erode velocity
@@ -155,14 +160,14 @@ public abstract class MovingObject extends FgObject  {
 	 * get x position of an object emerging from this object at the given translation from origin
 	 */
 	protected float getTransX(float tx, float ty) {
-		return c.x + cos(f) * tx - sin(f) * ty;
+		return x + cos(f) * tx - sin(f) * ty;
 	}
 	
 	/**
 	 * get y position of an object emerging from this object at the given translation from origin
 	 */
 	protected float getTransY(float tx, float ty) {
-		return c.y + sin(f) * tx + cos(f) * ty;
+		return y + sin(f) * tx + cos(f) * ty;
 	}
 	
 	/**
@@ -203,7 +208,7 @@ public abstract class MovingObject extends FgObject  {
 	
 	@Override
 	public String toString() {
-		return String.format("MovingFgObject[d=%.1f,%.1f fa=%.1f va=%.1f v=%.1f]", 
+		return String.format("Moving[d=%.1f,%.1f fa=%.1f va=%.1f v=%.1f]", 
 				vx, vy, deg(f), deg(angle()), velocity()) + super.toString();
 	}
 	

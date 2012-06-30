@@ -7,8 +7,7 @@ import java.util.StringTokenizer;
 /**
  * Convert method calls on interface to text strings.
  * Only a few primitive types and strings excluding control chars and tilde supported.
- * 
- * TODO use utf-8
+ * Always use same charset on sending and receiving side (UTF-8).
  */
 public class TextProxy implements InvocationHandler {
 	
@@ -101,6 +100,7 @@ public class TextProxy implements InvocationHandler {
 		pw.println(sb);
 		pw.flush();
 		// FIXME exception here will prevent other clients getting called in loop
+		// could catch all but need to indicate that removal is needed
 		return null;
 	}
 	

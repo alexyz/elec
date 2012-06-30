@@ -10,6 +10,7 @@ public class CSIntersect {
 	/**
 	 * rotate point around centre of rectangle
 	 */
+	@Deprecated
 	public static Point rotate(Rect r, float theta, Point p) {
 		float rxo = r.x0 + (r.x1 - r.x0) / 2;
 		float ryo = r.y0 + (r.y1 - r.y0) / 2;
@@ -27,11 +28,12 @@ public class CSIntersect {
 	/**
 	 * find intersection with rotated rectangle
 	 */
+	@Deprecated
 	public static Intersection superintersect(Rect r, float theta, Circle c, float tx, float ty, float bounceFactor) {
 		Point p = new Point(c.x, c.y);
 		Point p2 = rotate(r, theta, p);
 		//System.out.println("c " + p + " rotate " + theta + " is " + p2);
-		Circle c2 = new Circle(p2.x, p2.y, c.r);
+		Circle c2 = new Circle(p2.x, p2.y, c.radius);
 		
 		Point pt = new Point(c.x + tx, c.y + ty);
 		Point pt2 = rotate(r, theta, pt);
@@ -62,10 +64,10 @@ public class CSIntersect {
 	public static Intersection intersect(Rect r, Circle c, float tx, float ty, float bounceFactor) {
 		
 		// subtract radius of circle from square to make it a point
-		float rx0 = r.x0 - c.r;
-		float rx1 = r.x1 + c.r;
-		float ry0 = r.y0 - c.r;
-		float ry1 = r.y1 + c.r;
+		float rx0 = r.x0 - c.radius;
+		float rx1 = r.x1 + c.radius;
+		float ry0 = r.y0 - c.radius;
+		float ry1 = r.y1 + c.radius;
 
 		// consider translation line l1->l2 to be parameterised, e.g.
 		// any point on line = l1 + p(l2-l1) where p is 0 to 1

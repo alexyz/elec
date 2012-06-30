@@ -1,36 +1,39 @@
 package el.fg;
 
 import el.Model;
-import el.phys.Circle;
-
 
 /**
  * Meta-object that represents the current view port into the model
  */
 public class ModelObject extends FgObject {
 	public ModelObject() {
-		super(new Circle(Model.centrex, Model.centrey, 0));
+		this.x = Model.centrex;
+		this.y = Model.centrey;
 		setId(-1);
 	}
+	
 	@Override
 	public void down() {
-		c.y += 5;
+		y += 5;
 	}
+	
 	@Override
 	public void left() {
-		c.x -= 5;
+		x -= 5;
 	}
+	
 	@Override
 	public void right() {
-		c.x += 5;
+		x += 5;
 	}
+	
 	@Override
 	public void up() {
-		c.y -= 5;
+		y -= 5;
 	}
+	
 	@Override
 	public String toString() {
-		// TODO Auto-generated method stub
 		return "ModelObject[]" + super.toString();
 	}
 }

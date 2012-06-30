@@ -10,15 +10,10 @@ import el.phys.Intersection;
 
 /**
  * Object with a position, can paint and update and receive input if it has the focus
- * TODO should probably merge this with MovingFgObject
  */
-public abstract class FgObject {
+// should probably merge this with MovingFgObject and give model object momentum
+public abstract class FgObject extends Circle {
 	
-	/**
-	 * Location of object
-	 */
-	// TODO subclass circle instead?
-	protected final Circle c;
 	/**
 	 * Model of this object.
 	 * Never null after object is added to model
@@ -29,31 +24,38 @@ public abstract class FgObject {
 	 */
 	protected int id;
 	
-	/**
-	 * Create object with given location and radius
-	 */
-	public FgObject(Circle c) {
-		this.c = c;
+	public FgObject() {
+		//
 	}
 	
 	/** update object from string */
-	public void read(StringTokenizer tokens) {
+	public final void read(String data) {
+		readImpl(new StringTokenizer(data));
+	}
+	
+	/** update object from string */
+	protected void readImpl(StringTokenizer tokens) {
 		int id = Integer.parseInt(tokens.nextToken());
 		if (this.id != 0 && this.id != id) {
 			throw new RuntimeException("received new id");
 		}
 		this.id = id;
-    	c.x = Float.parseFloat(tokens.nextToken());
-		c.y = Float.parseFloat(tokens.nextToken());
-		c.r = Float.parseFloat(tokens.nextToken());
+    	x = Float.parseFloat(tokens.nextToken());
+		y = Float.parseFloat(tokens.nextToken());
+		radius = Float.parseFloat(tokens.nextToken());
     }
+	
+	/** write object to string */
+	public final String write() {
+		return writeImpl(new StringBuilder()).toString();
+	}
     
 	/** write object to string */
-    public StringBuilder write(StringBuilder sb) {
+	protected StringBuilder writeImpl(StringBuilder sb) {
     	sb.append(id).append(" ");
-    	sb.append(c.x).append(" ");
-    	sb.append(c.y).append(" ");
-    	sb.append(c.r).append(" ");
+    	sb.append(x).append(" ");
+    	sb.append(y).append(" ");
+    	sb.append(radius).append(" ");
     	return sb;
     }
     
@@ -61,31 +63,27 @@ public abstract class FgObject {
     	return id;
     }
     
-    public final Circle getPosition() {
-    	return c;
-    }
-	
 	/**
 	 * Current X position as closest integer
 	 */
 	public final int getX() {
 		// int conversion will round down
 		// as all model co-ordinates are positive, add 0.5 to avoid e.g. 4.9 -> 4
-		return (int) (c.x + 0.5f);
+		return (int) (x + 0.5f);
 	}
 	
 	/**
 	 * Current Y position as closest integer
 	 */
 	public final int getY() {
-		return (int) (c.y + 0.5f);
+		return (int) (y + 0.5f);
 	}
 	
 	/**
 	 * Width of object (for view clipping), default 0.
 	 */
 	public final int getRadius() {
-		return (int) (c.r + 0.5f);
+		return (int) (radius + 0.5f);
 	}
 	
 	/**
@@ -171,7 +169,7 @@ public abstract class FgObject {
 	
 	@Override
 	public String toString() {
-		return String.format("FgObject[%s]", c);
+		return String.format("FgObject[%d]", id) + super.toString();
 	}
 	
 }

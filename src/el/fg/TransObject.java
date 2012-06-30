@@ -20,22 +20,21 @@ public abstract class TransObject extends MovingObject {
 	 */
 	protected boolean remove;
 	
-	public TransObject(Circle c, float startt, float endt) {
-		super(c);
+	public TransObject(float startt, float endt) {
 		this.startt = startt;
 		this.endt = endt;
 	}
 	
 	@Override
-	public void read(StringTokenizer tokens) {
-		super.read(tokens);
+	protected void readImpl(StringTokenizer tokens) {
+		super.readImpl(tokens);
 		this.startt = Float.parseFloat(tokens.nextToken());
 		this.endt = Float.parseFloat(tokens.nextToken());
 	}
 	
 	@Override
-	public StringBuilder write(StringBuilder sb) {
-		super.write(sb);
+	protected StringBuilder writeImpl(StringBuilder sb) {
+		super.writeImpl(sb);
 		sb.append(startt).append(" ");
 		sb.append(endt).append(" ");
 		return sb;

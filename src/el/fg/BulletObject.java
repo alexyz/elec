@@ -3,8 +3,6 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.util.StringTokenizer;
 
-import el.phys.Circle;
-
 /**
  * Bomb or bullet, subclass of TransObject
  */
@@ -17,13 +15,16 @@ public class BulletObject extends TransObject {
 	
 	private Gun.Type type;
 	
-	public BulletObject(StringTokenizer tokens) {
-		super(new Circle(), 0, 0);
-		read(tokens);
+	public BulletObject() {
+		// time will be filled in later
+		super(0,0);
 	}
 	
 	public BulletObject(Gun.Type type, float t, float x, float y, float dx, float dy) {
-		super(new Circle(x, y, type.radius), t, t + lifet);
+		super(t, t + lifet);
+		this.x = x;
+		this.y = y;
+		this.radius = type.radius;
 		this.type = type;
 		this.vx = dx;
 		this.vy = dy;
@@ -34,14 +35,14 @@ public class BulletObject extends TransObject {
 	}
 	
 	@Override
-	public void read(StringTokenizer tokens) {
-		super.read(tokens);
+	protected void readImpl(StringTokenizer tokens) {
+		super.readImpl(tokens);
 		type = Gun.Type.valueOf(tokens.nextToken());
 	}
 	
 	@Override
-	public StringBuilder write(StringBuilder sb) {
-		super.write(sb);
+	protected StringBuilder writeImpl(StringBuilder sb) {
+		super.writeImpl(sb);
 		sb.append(type).append(" ");
 		return sb;
 	}

@@ -23,5 +23,7 @@ public interface ServerCommands {
 	public void playerHit(int transid);
 	/** current players ship was killed */
 	public void playerKilled(int killedId, float x, float y);
+	/** request ping */
+	public void ping();
 	
 }

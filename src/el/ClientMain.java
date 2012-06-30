@@ -15,21 +15,19 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
-
-
 public class ClientMain {
 	
 	public static final String SHIP1_IMAGE = "/img/ship1.png";
 	public static final String TILE1_IMAGE = "/img/tile1.png";
 	
-	public static long renderTime, freeTime;
-	public static JFrame frame;
+	public static float busy;
 
 	private static final PrintStream out = System.out;
 	private static final Map<String, Image> images = new HashMap<String, Image>();
 	private static final Model model = new Model();
 	private static final CanvasView view = new CanvasView(model);
 	
+	private static JFrame frame;
 	private static Timer timer;
 	private static ServerRunnable server;
 	private static long endTime;
@@ -80,7 +78,6 @@ public class ClientMain {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				long startt = System.nanoTime();
-				freeTime = startt - endTime;
 				
 				try {
 					// don't need to sync as server updates are on AWT thread
@@ -91,20 +88,33 @@ public class ClientMain {
 					
 				} catch (Exception ex) {
 					ex.printStackTrace(out);
-					JOptionPane.showMessageDialog(frame, 
-							ex.toString() + ": " + ex.getMessage(), 
-							"AWT Thread Exception", 
-							JOptionPane.ERROR_MESSAGE);
-					System.exit(1);
+					ClientMain.handleException("Timer", ex);
 				}
 				
 				long endt = System.nanoTime();
-				endTime = endt;
-				renderTime = endt - startt;
+				long renderTime = endt - startt;
+				busy = (renderTime + 0f) / (timer.getDelay() * 1000000f); 
 			}
 		});
 		
 		timer.start();
+	}
+	
+	/**
+	 * display dialog and exit
+	 */
+	public static void handleException(String title, Exception e) {
+		JOptionPane.showMessageDialog(ClientMain.frame, 
+				e.toString(), // + ": " + e.getMessage(), 
+				title, 
+				JOptionPane.ERROR_MESSAGE);
+		System.exit(-1);
+	}
+	
+	public static void disconnect() {
+		JOptionPane.showMessageDialog(frame, "Disconnected", "Disconnect", JOptionPane.WARNING_MESSAGE);
+		model.setServer(null);
+		server = null;
 	}
 
 	private static JMenuBar createMenuBar() {
@@ -113,7 +123,16 @@ public class ClientMain {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
-					String name = JOptionPane.showInputDialog(frame, "Enter name");
+					if (server != null) {
+						JOptionPane.showMessageDialog(frame, "Already connected", "Connect", JOptionPane.WARNING_MESSAGE);
+						return;
+					}
+					
+					String name = JOptionPane.showInputDialog(frame, "Enter name", "Connect", JOptionPane.QUESTION_MESSAGE);
+					if (name.length() == 0) {
+						return;
+					}
+					
 					Socket socket = new Socket("localhost", 8111);
 					ServerRunnable server = new ServerRunnable(socket, model, name);
 					
@@ -131,9 +150,8 @@ public class ClientMain {
 					// focus playing area
 					out.println("view request focus: " + view.requestFocusInWindow());
 					
-				} catch (Exception e1) {
-					// TODO dialog
-					e1.printStackTrace();
+				} catch (Exception ex) {
+					handleException("Connect", ex);
 				}
 			}
 		});
@@ -166,10 +184,23 @@ public class ClientMain {
 			}
 		});
 		
+		JMenuItem pingMenuItem = new JMenuItem("Ping");
+		pingMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (server != null) {
+					model.ping();
+				} else {
+					JOptionPane.showMessageDialog(frame, "Not connected");
+				}
+			}
+		});
+		
 		JMenu serverMenu = new JMenu("Server");
 		serverMenu.add(connectMenuItem);
 		serverMenu.add(enterReqMenuItem);
 		serverMenu.add(specMenuItem);
+		serverMenu.add(pingMenuItem);
 		
 		JMenu localMenu = new JMenu("Local");
 		

@@ -3,6 +3,7 @@ package el.serv;
 import java.util.*;
 import java.io.*;
 import java.net.*;
+import java.nio.charset.Charset;
 
 import el.Model;
 import el.bg.MapBgObject;
@@ -49,13 +50,12 @@ public class ServerMain {
 	private void run(int port) {
 		try {
 			ServerSocket serverSocket = new ServerSocket(port);
-
 			while (true) {
 				out.println("listening on " + serverSocket);
 				Socket socket = serverSocket.accept();
 				out.println("accepted " + socket);
-				socket.setKeepAlive(true);
-				//TODO do this to disconnect silent clients
+				//socket.setKeepAlive(true);
+				// disconnect silent clients - need to ping regularly
 				//socket.setSoTimeout(10000);
 				ClientRunnable client = new ClientRunnable(socket, nextClientId++);
 				Thread t = new Thread(client);
@@ -63,7 +63,7 @@ public class ServerMain {
 				t.setPriority(Thread.NORM_PRIORITY);
 				t.setName("Client-" + client.id);
 				t.start();
-				// XXX need to wrap nextClientId 
+				// XXX need to wrap nextClientId, but not reuse any already used, or not yet in clients list
 			}
 			
 		} catch (Exception e) {
@@ -95,26 +95,30 @@ public class ServerMain {
 		
 		/** network socket */
 		private final Socket socket;
-		/** input reader for receiving data from the client */
-		private final BufferedReader clientIn;
+		/** client input */
+		private final BufferedReader br;
 		/** client model proxy */
 		private final ClientCommands proxy;
 
 		public ClientRunnable(Socket socket, int id) throws Exception {
 			this.socket = socket;
 			this.id = id;
-			clientIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			proxy = TextProxy.createProxy(ClientCommands.class, new PrintWriter(socket.getOutputStream()));
+			// create input/output here so it is less likely to throw exception in run
+			OutputStreamWriter osw = new OutputStreamWriter(socket.getOutputStream(), Charset.forName("UTF-8"));
+			PrintWriter pw = new PrintWriter(osw);
+			this.proxy = TextProxy.createProxy(ClientCommands.class, pw);
+			InputStreamReader isr = new InputStreamReader(socket.getInputStream(), Charset.forName("UTF-8"));
+			this.br = new BufferedReader(isr);
 		}
 		
 		@Override
 		public void run() {
 			try {
 				// wait for first command from client
-				String line = clientIn.readLine();
-				out.println(this + ": received " + line);
+				String line = br.readLine();
+				out.println(name + ": read " + line);
 				
-				if (line.startsWith("setName")) {
+				if (line != null && line.startsWith("setName ")) {
 					TextProxy.unproxy(ServerCommands.class, this, line);
 				} else {
 					throw new Exception("client did not send name");
@@ -124,16 +128,19 @@ public class ServerMain {
 				init();
 				
 				// read commands from client...
-				while ((line = clientIn.readLine()) != null) {
-					out.println(this + ": received " + line);
+				while ((line = br.readLine()) != null) {
+					out.println(name + ": read " + line);
 					// calls ServerCommands method in this class by reflection
 					TextProxy.unproxy(ServerCommands.class, this, line);
 				}
 				
+				System.out.println(name + ": end of stream");
+				
 			} catch (Exception e) {
-				out.println(this + ": " + e);
-				deinit();
+				out.println(name + ": " + e);
 			}
+			
+			deinit();
 			
 			// close connection
 			try {
@@ -160,7 +167,7 @@ public class ServerMain {
 						
 						if (c.entered) {
 							// FIXME don't know position
-							proxy.playerEntered(c.id, c.freq, 1000, 1000, false);
+							proxy.playerEntered(c.id, c.freq, Model.centrex, Model.centrey, false);
 						}
 					}
 				}
@@ -188,6 +195,7 @@ public class ServerMain {
 		
 		@Override
 		public void setName(String name) {
+			// TODO check name length/collision
 			this.name = name;
 		}
 		
@@ -267,7 +275,7 @@ public class ServerMain {
 			synchronized (clients) {
 				for (ClientRunnable c : clients) {
 					if (c != this) {
-						c.proxy.addBullet(freq, data);
+						c.proxy.addBullet(data);
 					}
 				}
 			}
@@ -302,6 +310,11 @@ public class ServerMain {
 					c.proxy.playerEntered(id, freq, newx, newy, false);
 				}
 			}
+		}
+		
+		@Override
+		public void ping() {
+			proxy.pong();
 		}
 		
 	}
