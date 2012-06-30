@@ -44,8 +44,7 @@ class CanvasView extends Canvas {
 				int x = getModelX() + p.x;
 				int y = getModelY() + p.y;
 				System.out.println("view mouse clicked: " + x + ", " + y);
-				//model.getMap().place(x, y, e.getButton() == MouseEvent.BUTTON3);
-				model.updateMapTile(x, y, e.getButton());
+				model.setMapTileReq(x, y, e.getButton());
 			}
 			@Override
 			public void mouseMoved(MouseEvent e) {
@@ -156,7 +155,6 @@ class CanvasView extends Canvas {
 		for (FgObject o : objects) {
 			// object width, height
 			int r = o.getRadius();
-			int d = r * 2;
 			// view x, y
 			int tx = o.getX() - mxo;
 			int ty = o.getY() - myo;

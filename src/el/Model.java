@@ -4,7 +4,7 @@ package el;
 import java.util.*;
 
 import el.phys.*;
-import el.serv.ServerCommands;
+import el.serv.ClientCommands;
 import el.bg.*;
 import el.fg.*;
 
@@ -21,8 +21,11 @@ import el.fg.*;
  * 
  * <p>This class is not thread safe. Concurrent access must be externally synchronized
  * (i.e. from AWT event thread and ServerThread instance).
+ * 
+ * <p>Methods specified by ClientCommands interface should not send 
+ * the same command back to the server, unless you want an infinite loop
  */
-public class Model {
+public class Model implements ClientCommands {
 	
 	/** Nanoseconds in second */
 	private static final float NS_IN_S = 1000000000.0f;
@@ -65,6 +68,7 @@ public class Model {
 	// mutable fields
 	//
 	
+	private long serverTime, clientTime;
 	/**
 	 * time of last call to update
 	 */
@@ -94,6 +98,7 @@ public class Model {
 		//
 	}
 	
+	@Override
 	public void setId(int id, String name) {
 		this.id = id;
 		players.put(id, name);
@@ -103,10 +108,15 @@ public class Model {
 		return id;
 	}
 	
+	@Override
+	public void setTime(long time) {
+		serverTime = time;
+		clientTime = System.nanoTime();
+	}
+	
 	public void sendMsg(String msg) {
 		if (server != null) {
-			//server.sendTalkReq(msg);
-			server.send(ServerCommands.TALKREQ, msg);
+			server.getProxy().addMsg(msg);
 		} else {
 			msgs.add(new Msg(0, "(self)", msg));
 		}
@@ -116,6 +126,11 @@ public class Model {
 		return msgs;
 	}
 	
+	@Override
+	public void addMsg(int id, String msg) {
+		msgs.add(new Msg(0, players.get(id), msg));
+	}
+	
 	public Map<Integer,String> getPlayers() {
 		return players;
 	}
@@ -123,7 +138,8 @@ public class Model {
 	/**
 	 * player has connected
 	 */
-	public void addPlayer(int id, String name) {
+	@Override
+	public void playerConnected(int id, String name) {
 		players.put(id, name);
 		forceUpdate = true;
 		msgs.add(new Msg(0, null, name + " connected"));
@@ -134,7 +150,8 @@ public class Model {
 	/**
 	 * player has disconnected
 	 */
-	public void removePlayer(int id) {
+	@Override
+	public void playerExited(int id) {
 		removeFgObject(id);
 		String name = players.remove(id);
 		msgs.add(new Msg(0, null, name + " disconnected"));
@@ -156,7 +173,8 @@ public class Model {
 		}
 	}
 	
-	public void killed(int id, int killerId, float x, float y) {
+	@Override
+	public void playerKilled(int id, int killerId, float x, float y) {
 		removeFgObject(id);
 		ExplodeObject ex = new ExplodeObject(x, y, 24, getTime());
 		addTransObject(ex, false);
@@ -169,7 +187,8 @@ public class Model {
 	/**
 	 * enter someone, possibly user into the game
 	 */
-	public void enter(int id, int freq, float x, float y, boolean msg) {
+	@Override
+	public void playerEntered(int id, int freq, float x, float y, boolean msg) {
 		if (id == focusObj.getId()) {
 			throw new RuntimeException();
 		}
@@ -190,7 +209,8 @@ public class Model {
 	/**
 	 * remove the given user (possibly self) from the game
 	 */
-	public void spec(int id) {
+	@Override
+	public void playerSpectated(int id) {
 		removeFgObject(id);
 		String name = players.get(id);
 		msgs.add(new Msg(0, null, name + " spectates"));
@@ -218,7 +238,9 @@ public class Model {
 		
 		float floatTime, floatTimeDelta;
 		if (server != null) {
-			floatTime = server.getTime() / NS_IN_S;
+			//floatTime = server.getTime() / NS_IN_S;
+			long t = serverTime + System.nanoTime() - clientTime;
+			floatTime = t / NS_IN_S;
 			floatTimeDelta = floatTime - this.updateTime;
 			
 		} else {
@@ -270,8 +292,7 @@ public class Model {
 			if (l != null) {
 				for (BulletObject obj : l) {
 					if (obj.getFreq() != s.getFreq() && !obj.hitSent) {
-						//server.sendHit(obj.getId());
-						server.send(ServerCommands.HIT, obj.getId());
+						server.getProxy().playerHit(obj.getId());
 						obj.hitSent = true;
 						//FIXME hack until we get proper info types
 						s.setEnergy(s.getEnergy() - 100f);
@@ -284,15 +305,15 @@ public class Model {
 			}
 			if (s.getEnergy() < 0) {
 				// wait for server to send message back for explosion
-				server.send(ServerCommands.KILLED, killerId, focusObj.getPosition().x, focusObj.getPosition().y);
+				server.getProxy().playerKilled(killerId, focusObj.getPosition().x, focusObj.getPosition().y);
 			}
 		}
 		
 		// send to server - after possible reflect
 		if (server != null && focusObj instanceof ShipObject && forceUpdate) {
 			// update focused ship on server
-			//server.sendUpdate((ShipObject) focusObj);
-			server.send(ServerCommands.UPDATE, focusObj);
+			server.getProxy().update(focusObj.write(new StringBuilder()).toString());
+			
 			lastUpdate = floatTime;
 			forceUpdate = false;
 		}
@@ -303,7 +324,8 @@ public class Model {
 	/**
 	 * Create explosion transient
 	 */
-	public void explode(int transId) {
+	@Override
+	public void bulletExploded(int transId) {
 		for (TransObject obj : transObjects) {
 			if (obj.getId() == transId) {
 				// TODO inflict damage on self
@@ -377,11 +399,12 @@ public class Model {
 	}
 	
 	/** update the state of the given object, called by server */
-	public void updateFgObject(int id, StringTokenizer tokens) {
+	@Override
+	public void updateFgObject(int id, String data) {
 		// focused object could be updated if spectating someone else
 		for (FgObject obj : objects) {
 			if (obj.getId() == id) {
-				obj.read(tokens);
+				obj.read(new StringTokenizer(data));
 				return;
 			}
 		}
@@ -389,6 +412,13 @@ public class Model {
 	}
 	
 	private int transIdSeq = 0;
+	
+	@Override
+	public void addBullet(int freq, String data) {
+		BulletObject bullet = new BulletObject(new StringTokenizer(data));
+		bullet.setFreq(freq);
+		addTransObject(bullet, false);
+	}
 	
 	/**
 	 * Add a transient object, optionally sending to server
@@ -402,8 +432,7 @@ public class Model {
 		if (send && server != null && obj instanceof BulletObject) {
 			obj.setId(id * 1000 + transIdSeq);
 			transIdSeq = (transIdSeq + 1) % 1000;
-			//server.sendFire((BulletObject)obj);
-			server.send(ServerCommands.FIREREQ, obj);
+			server.getProxy().addBullet(obj.write(new StringBuilder()).toString());
 		}
 	}
 	
@@ -416,6 +445,7 @@ public class Model {
 		return r;
 	}
 	
+	@Deprecated
 	public void foregroundCollision(ShipObject ship) {
 		ArrayList<BulletObject> l = transMap.get(ship.getX(), ship.getY(), ship.getRadius());
 		if (l != null) {
@@ -427,8 +457,6 @@ public class Model {
 				}
 			}
 		}
-		
-		
 	}
 	
 	public void setServer(ServerRunnable server) {
@@ -440,27 +468,31 @@ public class Model {
 		return map;
 	}
 	
-	public void updateMapTile(int x, int y, int action) {
+	@Override
+	public void setMapData(String data) {
+		map.read(new StringTokenizer(data));
+	}
+	
+	public void setMapTileReq(int x, int y, int action) {
 		if (server != null) {
-			//server.sendMapTileReq(x, y, action);
-			server.send(ServerCommands.MAPTILEREQ, x, y, action);
+			server.getProxy().setMapTile(x, y, action);
 		} else {
-			map.updateMapTile(x, y, action);
+			map.setMapTile(x, y, action);
 		}
 	}
 	
 	@Override
+	public void setMapTile(int x, int y, int action) {
+		map.setMapTile(x, y, action);
+	}
+	
+	@Override
 	public String toString() {
-		float serverTime = 0;
-		if (server != null) {
-			serverTime = server.getTime() / NS_IN_S;
-		}
-		return String.format("Model[id=%d pos=%s objs=%d,%d t=%.1f st=%.1f %s]", 
+		return String.format("Model[id=%d pos=%s objs=%d,%d t=%.1f %s]", 
 				id,
 				focusObj.getPosition(),
 				objects.size(), transObjects.size(), 
 				updateTime, 
-				serverTime, 
 				actions);
 	}
 	

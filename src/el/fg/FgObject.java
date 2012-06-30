@@ -5,7 +5,6 @@ import java.awt.geom.AffineTransform;
 import java.util.StringTokenizer;
 
 import el.phys.Circle;
-import el.phys.QuadMap;
 import el.Model;
 import el.phys.Intersection;
 

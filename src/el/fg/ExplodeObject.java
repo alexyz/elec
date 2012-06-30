@@ -5,6 +5,9 @@ import java.awt.Graphics2D;
 
 import el.phys.Circle;
 
+/**
+ * An explosion
+ */
 public class ExplodeObject extends TransObject {
 	private static final int lifet = 1;
 	public ExplodeObject(float x, float y, float radius, float t) {

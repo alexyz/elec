@@ -7,7 +7,6 @@ import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.Socket;
 import java.net.URL;
 import java.util.HashMap;
@@ -16,7 +15,6 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
-import el.serv.ServerCommands;
 
 
 public class ClientMain {
@@ -85,13 +83,12 @@ public class ClientMain {
 				freeTime = startt - endTime;
 				
 				try {
-					// don't allow network updates when updating and painting
-					// TODO - change ServerRunnable so it posts AWT events rather than use sync
-					synchronized (model) {
-						model.update();
-						// should skip this if behind
-						view.paintImmediately(0, 0, view.getWidth(), view.getHeight());
-					}
+					// don't need to sync as server updates are on AWT thread
+					model.update();
+					// should skip this if behind
+					// or just reduce frame rate
+					view.paintImmediately(0, 0, view.getWidth(), view.getHeight());
+					
 				} catch (Exception ex) {
 					ex.printStackTrace(out);
 					JOptionPane.showMessageDialog(frame, 
@@ -135,6 +132,7 @@ public class ClientMain {
 					out.println("view request focus: " + view.requestFocusInWindow());
 					
 				} catch (Exception e1) {
+					// TODO dialog
 					e1.printStackTrace();
 				}
 			}
@@ -145,7 +143,7 @@ public class ClientMain {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (server != null) {
-					server.send(ServerCommands.ENTERREQ);
+					server.getProxy().enterReq();
 				} else {
 					JOptionPane.showMessageDialog(frame, "Not connected");
 				}
@@ -159,7 +157,7 @@ public class ClientMain {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (server != null) {
-					server.send(ServerCommands.SPEC);
+					server.getProxy().spec();
 					// wait for server?
 					//model.spec();
 				} else {

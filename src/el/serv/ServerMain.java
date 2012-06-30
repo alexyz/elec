@@ -8,25 +8,9 @@ import el.Model;
 import el.bg.MapBgObject;
 
 /**
- * electron server
- * 
- * General process of a client->server->client cycle is:
- * 
- * (c) Model/UI calls ServerThread.enterReq()
- * (c) ServerThread writes "enter-req" command to server
- * ~
- * (s) ClientThread reads command
- * (s) ClientThread calls ServerMain.clientEnterReq()
- * (s) ServerMain considers and sends "enter [id]" to all clients
- * ~
- * (c) ServerThread reads command
- * (c) ServerThread calls Model.enter(id)
+ * electron server 2
  */
 public class ServerMain {
-	
-	//
-	// final fields
-	//
 	
 	private static final PrintStream out = System.out;
 	
@@ -35,22 +19,14 @@ public class ServerMain {
 		server.run(8111);
 	}
 	
-	//
-	// instance
-	//
-	
 	/**
-	 * list of connected clients. any reads or writes to this list should be synchronized
+	 * list of connected clients. any reads or writes to this list must be synchronised
 	 */
-	private final List<ClientThread> clients = new ArrayList<ClientThread>();
+	private final List<ClientRunnable> clients = new ArrayList<ClientRunnable>();
 	/**
 	 * Current map state
 	 */
 	private final MapBgObject map = new MapBgObject();
-	
-	//
-	// mutable fields
-	//
 	
 	private int nextClientId = 1000;
 	
@@ -81,116 +57,17 @@ public class ServerMain {
 				socket.setKeepAlive(true);
 				//TODO do this to disconnect silent clients
 				//socket.setSoTimeout(10000);
-				ClientThread client = new ClientThread(this, socket, nextClientId++);
-				client.start();
-				synchronized (clients) {
-					out.println("adding " + client);
-					clients.add(client);
-				}
+				ClientRunnable client = new ClientRunnable(socket, nextClientId++);
+				Thread t = new Thread(client);
+				t.setDaemon(true);
+				t.setPriority(Thread.NORM_PRIORITY);
+				t.setName("Client-" + client.id);
+				t.start();
 				// XXX need to wrap nextClientId 
 			}
 			
 		} catch (Exception e) {
 			e.printStackTrace(out);
-		}
-	}
-	
-	/**
-	 * client requests enter game, assign a freq and inform other clients
-	 */
-	public void clientEnterReq(ClientThread client) {
-		// count numbers on each frequency
-		int[] freqCount = new int[maxFreqs];
-		synchronized (clients) {
-			for (ClientThread c : clients) {
-				freqCount[c.freq]++;
-			}
-		}
-		
-		// find smallest frequency
-		int minFreq = 0;
-		int minCount = Integer.MAX_VALUE;
-		for (int f = 1; f < freqCount.length; f++) {
-			if (freqCount[f] < minCount) {
-				minCount = freqCount[f];
-				minFreq = f;
-			}
-		}
-		
-		float x = Model.centrex + (float) (Math.random() * 640 - 320);
-		float y = Model.centrey + (float) (Math.random() * 480 - 240);
-		boolean msg = true;
-		
-		sendAll(ClientCommands.ENTER, client.id, minFreq, x, y, msg);
-		
-		client.freq = minFreq;
-		client.entered = true;
-	}
-	
-	/** tell all clients the client has begun spectating */
-	public void clientSpec(ClientThread client) {
-		client.entered = false;
-		client.freq = 0;
-		sendAll(ClientCommands.SPEC, client.id);
-	}
-	
-	/** update the state of the client object on the other clients */
-	public void clientUpdate(ClientThread client, String data) {
-		if (!client.entered) {
-			out.println("client " + client + " not entered!!");
-			client.send(ClientCommands.TALK, 0, "you are not entered");
-			return;
-		}
-		synchronized (clients) {
-			for (ClientThread c : clients) {
-				if (c != client) {
-					c.send(ClientCommands.UPDATEOBJ , client.id, data);
-				}
-			}
-		}
-	}
-	
-	/** send current state of server to new client */
-	public void clientInit(ClientThread client) {
-		client.send(ClientCommands.ID, client.id);
-		client.send(ClientCommands.TIME, time());
-		
-		// send map
-		client.send(ClientCommands.MAPDATA, map.write(new StringBuilder()));
-		
-		synchronized (clients) {
-			for (ClientThread c : clients) {
-				if (c != client) {
-					// introduce clients to each other
-					c.send(ClientCommands.CONNECTED, client.id, client.name);
-					client.send(ClientCommands.CONNECTED, c.id, c.name);
-					
-					if (c.entered) {
-						// FIXME don't know position
-						client.send(ClientCommands.ENTER, c.id, c.freq, 1000, 1000, false);
-					}
-				}
-			}
-		}
-		
-	}
-	
-	/** tell client to update map tile */
-	public void clientMapTileReq(ClientThread client, int x, int y, int act) {
-		map.updateMapTile(x, y, act);
-		sendAll(ClientCommands.MAPTILE, x, y, act);
-	}
-	
-	/**
-	 * consider fire request and send to clients
-	 */
-	public void clientFireReq(ClientThread client, String data) {
-		synchronized (clients) {
-			for (ClientThread c : clients) {
-				if (c != client) {
-					c.send(ClientCommands.FIRE, client.freq, data);
-				}
-			}
 		}
 	}
 	
@@ -201,42 +78,233 @@ public class ServerMain {
 		return System.nanoTime() - startTime;
 	}
 	
-	/** send command to all clients */
-	private void sendAll(String command, Object... args) {
-		synchronized (clients) {
-			for (ClientThread c : clients) {
-				c.send(command, args);
+	/**
+	 * Server connection thread to client.
+	 * Each client has at most one foreground object identified by id.
+	 */
+	private class ClientRunnable implements Runnable, ServerCommands {
+		
+		/** client unique identifier */
+		public final int id;
+		/** is this client entered */
+		public boolean entered;
+		/** clients name */
+		public String name;
+		/** client's frequency */
+		public int freq;
+		
+		/** network socket */
+		private final Socket socket;
+		/** input reader for receiving data from the client */
+		private final BufferedReader clientIn;
+		/** client model proxy */
+		private final ClientCommands proxy;
+
+		public ClientRunnable(Socket socket, int id) throws Exception {
+			this.socket = socket;
+			this.id = id;
+			clientIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			proxy = TextProxy.createProxy(ClientCommands.class, new PrintWriter(socket.getOutputStream()));
+		}
+		
+		@Override
+		public void run() {
+			try {
+				// wait for first command from client
+				String line = clientIn.readLine();
+				out.println(this + ": received " + line);
+				
+				if (line.startsWith("setName")) {
+					TextProxy.unproxy(ServerCommands.class, this, line);
+				} else {
+					throw new Exception("client did not send name");
+				}
+				
+				// send server state to new client...
+				init();
+				
+				// read commands from client...
+				while ((line = clientIn.readLine()) != null) {
+					out.println(this + ": received " + line);
+					// calls ServerCommands method in this class by reflection
+					TextProxy.unproxy(ServerCommands.class, this, line);
+				}
+				
+			} catch (Exception e) {
+				out.println(this + ": " + e);
+				deinit();
+			}
+			
+			// close connection
+			try {
+				socket.close();
+			} catch (Exception e) {
+				e.printStackTrace(out);
 			}
 		}
-	}
-
-	/** remove client after disconnection */
-	public void clientExit(ClientThread client) {
-		synchronized (clients) {
-			out.println("removing " + client);
-			clients.remove(client);
-			sendAll(ClientCommands.EXIT, client.id);
+		
+		/** send current state of server to new client */
+		private void init() {
+			proxy.setId(id, name);
+			proxy.setTime(time());
+			
+			// send map
+			proxy.setMapData(map.write(new StringBuilder()).toString());
+			
+			synchronized (clients) {
+				for (ClientRunnable c : clients) {
+					if (c != this) {
+						// introduce clients to each other
+						c.proxy.playerConnected(id, name);
+						proxy.playerConnected(c.id, c.name);
+						
+						if (c.entered) {
+							// FIXME don't know position
+							proxy.playerEntered(c.id, c.freq, 1000, 1000, false);
+						}
+					}
+				}
+			}
+			
+			// start sending updates to new client...
+			synchronized (clients) {
+				out.println("adding " + this);
+				clients.add(this);
+			}
 		}
-	}
+		
+		/** remove client after disconnection */
+		private void deinit() {
+			synchronized (clients) {
+				out.println("removing " + this);
+				clients.remove(this);
+				synchronized (clients) {
+					for (ClientRunnable c : clients) {
+						c.proxy.playerExited(id);
+					}
+				}
+			}
+		}
+		
+		@Override
+		public void setName(String name) {
+			this.name = name;
+		}
+		
+		@Override
+		public void enterReq() {
+			// count numbers on each frequency
+			int[] freqCount = new int[maxFreqs];
+			synchronized (clients) {
+				for (ClientRunnable c : clients) {
+					freqCount[c.freq]++;
+				}
+			}
+			
+			// find smallest frequency
+			int minFreq = 0;
+			int minCount = Integer.MAX_VALUE;
+			for (int f = 1; f < freqCount.length; f++) {
+				if (freqCount[f] < minCount) {
+					minCount = freqCount[f];
+					minFreq = f;
+				}
+			}
+			
+			float x = Model.centrex + (float) (Math.random() * 640 - 320);
+			float y = Model.centrey + (float) (Math.random() * 480 - 240);
+			boolean msg = true;
+			
+			synchronized (clients) {
+				for (ClientRunnable c : clients) {
+					c.proxy.playerEntered(id, minFreq, x, y, msg);
+				}
+			}
+			
+			freq = minFreq;
+			entered = true;
+		}
 
-	/**
-	 * consider talk request and send to clients
-	 */
-	public void clientTalkReq(ClientThread client, String str) {
-		sendAll(ClientCommands.TALK, client.id, str);
-	}
-	
-	public void clientHit(ClientThread client, int transId) {
-		sendAll(ClientCommands.EXPLODE, transId);
-	}
-	
-	public void clientKilled(ClientThread client, int killerId, float x, float y) {
-		sendAll(ClientCommands.KILL, client.id, killerId, x, y);
-		float newx = Model.centrex + (float) (Math.random() * 640 - 320);
-		float newy = Model.centrey + (float) (Math.random() * 480 - 240);
-		// really needs to send delay
-		sendAll(ClientCommands.ENTER, client.id, client.freq, newx, newy, false);
+		@Override
+		public void spec() {
+			entered = false;
+			freq = 0;
+			synchronized (clients) {
+				for (ClientRunnable c : clients) {
+					c.proxy.playerSpectated(id);
+				}
+			}
+		}
+
+		@Override
+		public void update(String data) {
+			if (!entered) {
+				out.println("client " + this + " not entered!!");
+				proxy.addMsg(0, "you are not entered");
+				return;
+			}
+			synchronized (clients) {
+				for (ClientRunnable c : clients) {
+					if (c != this) {
+						c.proxy.updateFgObject(id, data);
+					}
+				}
+			}
+		}
+
+		@Override
+		public void setMapTile(int x, int y, int action) {
+			synchronized (clients) {
+				map.setMapTile(x, y, action);
+				for (ClientRunnable c : clients) {
+					c.proxy.setMapTile(x, y, action);
+				}
+			}
+		}
+
+		@Override
+		public void addBullet(String data) {
+			synchronized (clients) {
+				for (ClientRunnable c : clients) {
+					if (c != this) {
+						c.proxy.addBullet(freq, data);
+					}
+				}
+			}
+		}
+
+		@Override
+		public void addMsg(String msg) {
+			synchronized (clients) {
+				for (ClientRunnable c : clients) {
+					c.proxy.addMsg(id, msg);
+				}
+			}
+		}
+
+		@Override
+		public void playerHit(int transId) {
+			synchronized (clients) {
+				for (ClientRunnable c : clients) {
+					c.proxy.bulletExploded(transId);
+				}
+			}
+		}
+
+		@Override
+		public void playerKilled(int killerId, float x, float y) {
+			float newx = Model.centrex + (float) (Math.random() * 640 - 320);
+			float newy = Model.centrey + (float) (Math.random() * 480 - 240);
+			synchronized (clients) {
+				for (ClientRunnable c : clients) {
+					c.proxy.playerKilled(id, killerId, x, y);
+					// TODO really needs to send delay
+					c.proxy.playerEntered(id, freq, newx, newy, false);
+				}
+			}
+		}
 		
 	}
+
 	
 }
