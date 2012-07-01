@@ -54,7 +54,8 @@ public class MapBgObject extends BgObject {
 	}
 	
 	@Override
-	public void paint(Graphics2D g, float mx1, float my1, int w, int h) {
+	public void paint(Graphics2D g, float mx1, float my1) {
+		int w = g.getClipBounds().width, h = g.getClipBounds().height;
 		final float mx2 = mx1 + w, my2 = my1 + h;
 		// g.setColor(Color.white);
 		// g.drawString(String.format("map x %.1f to %.1f, y %.1f to %.1f", mx1,
@@ -87,6 +88,7 @@ public class MapBgObject extends BgObject {
 		Intersection r;
 		for (Tile t : tiles)
 			if ((r = t.intersects(c, tx, ty)) != null)
+				// FIXME need to see if reflection bounces...
 				return r;
 		return null;
 	}

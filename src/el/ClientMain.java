@@ -15,13 +15,18 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
+// create frame, view and model
+// should probably be subclass of JFrame and have getInstance method
 public class ClientMain {
 	
 	public static final String SHIP1_IMAGE = "/img/ship1.png";
 	public static final String TILE1_IMAGE = "/img/tile1.png";
 	
+	// global information
 	public static float busy;
-
+	public static boolean aa = true;
+	public static boolean grid;
+	
 	private static final PrintStream out = System.out;
 	private static final Map<String, Image> images = new HashMap<String, Image>();
 	private static final Model model = new Model();
@@ -30,12 +35,11 @@ public class ClientMain {
 	private static JFrame frame;
 	private static Timer timer;
 	private static ServerRunnable server;
-	private static long endTime;
-
+	
 	public static void main(String[] args) {
-
+		
 		out.println("dir: " + System.getProperty("user.dir"));
-
+		
 		final JPanel p = new JPanel(new BorderLayout());
 		p.add(view, BorderLayout.CENTER);
 		
@@ -49,31 +53,7 @@ public class ClientMain {
 		f.setVisible(true);
 		
 		frame = f;
-
-		SwingUtilities.invokeLater(new Runnable() {
-
-			@Override
-			public void run() {
-				// do initial paint and print some information
-				System.out.println("view request focus: " + view.requestFocusInWindow());
-				view.paintImmediately(0, 0, view.getWidth(), view.getHeight());
-				System.out.println("panel double buffered: " + p.isDoubleBuffered());
-				System.out.println("panel opaque: " + p.isOpaque());
-				System.out.println("panel optimized: " + p.isOptimizedDrawingEnabled());
-				System.out.println("panel lightweight: " + p.isLightweight());
-				System.out.println("view double buffered: " + view.isDoubleBuffered());
-				System.out.println("view opaque: " + view.isOpaque());
-				BufferStrategy bs = view.getBufferStrategy();
-				System.out.println("canvas view buffer strategy: " + bs.getClass());
-				BufferCapabilities c = bs.getCapabilities();
-				System.out.println("canvas view buffer full screen required: " + c.isFullScreenRequired());
-				System.out.println("canvas view buffer multi buffer: " + c.isMultiBufferAvailable());
-				System.out.println("canvas view buffer page flipping: " + c.isPageFlipping());
-				System.out.println("canvas view buffer back buffer accel: " + c.getBackBufferCapabilities().isAccelerated());
-				System.out.println("canvas view buffer front buffer accel: " + c.getFrontBufferCapabilities().isAccelerated());
-			}
-		});
-
+		
 		timer = new Timer(25, new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -98,6 +78,35 @@ public class ClientMain {
 		});
 		
 		timer.start();
+		
+		SwingUtilities.invokeLater(new Runnable() {
+			@Override
+			public void run() {
+				// do initial paint and print some information
+				try {
+					System.out.println("view request focus: " + view.requestFocusInWindow());
+					view.paintImmediately(0, 0, view.getWidth(), view.getHeight());
+					System.out.println("panel double buffered: " + p.isDoubleBuffered());
+					System.out.println("panel opaque: " + p.isOpaque());
+					System.out.println("panel optimized: " + p.isOptimizedDrawingEnabled());
+					System.out.println("panel lightweight: " + p.isLightweight());
+					System.out.println("view double buffered: " + view.isDoubleBuffered());
+					System.out.println("view opaque: " + view.isOpaque());
+					BufferStrategy bs = view.getBufferStrategy();
+					System.out.println("canvas view buffer strategy: " + bs.getClass());
+					BufferCapabilities c = bs.getCapabilities();
+					System.out.println("canvas view buffer full screen required: " + c.isFullScreenRequired());
+					System.out.println("canvas view buffer multi buffer: " + c.isMultiBufferAvailable());
+					System.out.println("canvas view buffer page flipping: " + c.isPageFlipping());
+					System.out.println("canvas view buffer back buffer accel: " + c.getBackBufferCapabilities().isAccelerated());
+					System.out.println("canvas view buffer front buffer accel: " + c.getFrontBufferCapabilities().isAccelerated());
+				} catch (Exception e) {
+					e.printStackTrace(out);
+					handleException("Init", e);
+				}
+			}
+		});
+		
 	}
 	
 	/**
@@ -116,7 +125,7 @@ public class ClientMain {
 		model.setServer(null);
 		server = null;
 	}
-
+	
 	private static JMenuBar createMenuBar() {
 		JMenuItem connectMenuItem = new JMenuItem("Connect (localhost/8111)");
 		connectMenuItem.addActionListener(new ActionListener() {
@@ -148,7 +157,7 @@ public class ClientMain {
 					t.start();
 					
 					// focus playing area
-					out.println("view request focus: " + view.requestFocusInWindow());
+					view.requestFocusInWindow();
 					
 				} catch (Exception ex) {
 					handleException("Connect", ex);
@@ -161,12 +170,12 @@ public class ClientMain {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (server != null) {
-					server.getProxy().enterReq();
+					server.getServerProxy().enterReq();
 				} else {
 					JOptionPane.showMessageDialog(frame, "Not connected");
 				}
 				// have to request focus on view otherwise menu bar keeps focus
-				out.println("view request focus: " + view.requestFocusInWindow());
+				view.requestFocusInWindow();
 			}
 		});
 		
@@ -175,12 +184,13 @@ public class ClientMain {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (server != null) {
-					server.getProxy().spec();
+					server.getServerProxy().spec();
 					// wait for server?
 					//model.spec();
 				} else {
 					JOptionPane.showMessageDialog(frame, "Not connected");
 				}
+				view.requestFocusInWindow();
 			}
 		});
 		
@@ -193,6 +203,7 @@ public class ClientMain {
 				} else {
 					JOptionPane.showMessageDialog(frame, "Not connected");
 				}
+				view.requestFocusInWindow();
 			}
 		});
 		
@@ -202,35 +213,48 @@ public class ClientMain {
 		serverMenu.add(specMenuItem);
 		serverMenu.add(pingMenuItem);
 		
+		final JCheckBoxMenuItem gridMenuItem = new JCheckBoxMenuItem("Map Grid");
+		gridMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				grid = gridMenuItem.isSelected();
+			}
+		});
+		gridMenuItem.setSelected(grid);
+		
+		final JCheckBoxMenuItem aaMenuItem = new JCheckBoxMenuItem("Anti-alias");
+		aaMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				aa = aaMenuItem.isSelected();
+			}
+		});
+		aaMenuItem.setSelected(aa);
+		
 		JMenu localMenu = new JMenu("Local");
+		localMenu.add(gridMenuItem);
+		localMenu.add(aaMenuItem);
 		
 		JMenuBar menuBar = new JMenuBar();
 		menuBar.add(serverMenu);
 		menuBar.add(localMenu);
 		return menuBar;
 	}
-
-	/**
-	 * Increase frame rate
-	 */
-	static void faster() {
-		timer.setDelay(timer.getDelay() - 1);
-	}
-
+	
 	/**
 	 * Reduce frame rate
 	 */
-	static void slower() {
-		timer.setDelay(timer.getDelay() + 1);
+	public static void setDelay(int delay) {
+		timer.setDelay(delay);
 	}
-
+	
 	/**
 	 * Get delay between frames
 	 */
-	static int getDelay() {
+	public static int getDelay() {
 		return timer.getDelay();
 	}
-
+	
 	/**
 	 * Get cached image
 	 */

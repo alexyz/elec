@@ -98,7 +98,8 @@ public class ServerMain {
 		/** client input */
 		private final BufferedReader br;
 		/** client model proxy */
-		private final ClientCommands proxy;
+		private final ClientCommands clientProxy;
+		private final TextProxy.Unproxy serverUnproxy;
 
 		public ClientRunnable(Socket socket, int id) throws Exception {
 			this.socket = socket;
@@ -106,9 +107,10 @@ public class ServerMain {
 			// create input/output here so it is less likely to throw exception in run
 			OutputStreamWriter osw = new OutputStreamWriter(socket.getOutputStream(), Charset.forName("UTF-8"));
 			PrintWriter pw = new PrintWriter(osw);
-			this.proxy = TextProxy.createProxy(ClientCommands.class, pw);
+			this.clientProxy = TextProxy.createProxy(ClientCommands.class, pw);
 			InputStreamReader isr = new InputStreamReader(socket.getInputStream(), Charset.forName("UTF-8"));
 			this.br = new BufferedReader(isr);
+			this.serverUnproxy = TextProxy.createUnproxy(ServerCommands.class, this);
 		}
 		
 		@Override
@@ -116,10 +118,11 @@ public class ServerMain {
 			try {
 				// wait for first command from client
 				String line = br.readLine();
-				out.println(name + ": read " + line);
+				out.println(this + ": read " + line);
 				
 				if (line != null && line.startsWith("setName ")) {
-					TextProxy.unproxy(ServerCommands.class, this, line);
+					// call method in this class by reflection
+					serverUnproxy.call(line);
 				} else {
 					throw new Exception("client did not send name");
 				}
@@ -129,15 +132,16 @@ public class ServerMain {
 				
 				// read commands from client...
 				while ((line = br.readLine()) != null) {
-					out.println(name + ": read " + line);
+					out.println(this + ": read " + line);
 					// calls ServerCommands method in this class by reflection
-					TextProxy.unproxy(ServerCommands.class, this, line);
+					//TextProxy.unproxy(ServerCommands.class, this, line);
+					serverUnproxy.call(line);
 				}
 				
-				System.out.println(name + ": end of stream");
+				out.println(this + ": end of stream");
 				
 			} catch (Exception e) {
-				out.println(name + ": " + e);
+				out.println(this + ": " + e);
 			}
 			
 			deinit();
@@ -152,22 +156,22 @@ public class ServerMain {
 		
 		/** send current state of server to new client */
 		private void init() {
-			proxy.setId(id, name);
-			proxy.setTime(time());
+			clientProxy.setId(id, name);
+			clientProxy.setTime(time());
 			
 			// send map
-			proxy.setMapData(map.write(new StringBuilder()).toString());
+			clientProxy.setMapData(map.write(new StringBuilder()).toString());
 			
 			synchronized (clients) {
 				for (ClientRunnable c : clients) {
 					if (c != this) {
 						// introduce clients to each other
-						c.proxy.playerConnected(id, name);
-						proxy.playerConnected(c.id, c.name);
+						c.clientProxy.playerConnected(id, name);
+						clientProxy.playerConnected(c.id, c.name);
 						
 						if (c.entered) {
 							// FIXME don't know position
-							proxy.playerEntered(c.id, c.freq, Model.centrex, Model.centrey, false);
+							clientProxy.playerEntered(c.id, c.freq, Model.centrex, Model.centrey, false);
 						}
 					}
 				}
@@ -187,7 +191,7 @@ public class ServerMain {
 				clients.remove(this);
 				synchronized (clients) {
 					for (ClientRunnable c : clients) {
-						c.proxy.playerExited(id);
+						c.clientProxy.playerExited(id);
 					}
 				}
 			}
@@ -225,7 +229,7 @@ public class ServerMain {
 			
 			synchronized (clients) {
 				for (ClientRunnable c : clients) {
-					c.proxy.playerEntered(id, minFreq, x, y, msg);
+					c.clientProxy.playerEntered(id, minFreq, x, y, msg);
 				}
 			}
 			
@@ -239,7 +243,7 @@ public class ServerMain {
 			freq = 0;
 			synchronized (clients) {
 				for (ClientRunnable c : clients) {
-					c.proxy.playerSpectated(id);
+					c.clientProxy.playerSpectated(id);
 				}
 			}
 		}
@@ -248,13 +252,13 @@ public class ServerMain {
 		public void update(String data) {
 			if (!entered) {
 				out.println("client " + this + " not entered!!");
-				proxy.addMsg(0, "you are not entered");
+				clientProxy.addMsg(0, "you are not entered");
 				return;
 			}
 			synchronized (clients) {
 				for (ClientRunnable c : clients) {
 					if (c != this) {
-						c.proxy.updateFgObject(id, data);
+						c.clientProxy.updateFgObject(id, data);
 					}
 				}
 			}
@@ -265,7 +269,7 @@ public class ServerMain {
 			synchronized (clients) {
 				map.setMapTile(x, y, action);
 				for (ClientRunnable c : clients) {
-					c.proxy.setMapTile(x, y, action);
+					c.clientProxy.setMapTile(x, y, action);
 				}
 			}
 		}
@@ -275,7 +279,7 @@ public class ServerMain {
 			synchronized (clients) {
 				for (ClientRunnable c : clients) {
 					if (c != this) {
-						c.proxy.addBullet(data);
+						c.clientProxy.addBullet(data);
 					}
 				}
 			}
@@ -285,7 +289,7 @@ public class ServerMain {
 		public void addMsg(String msg) {
 			synchronized (clients) {
 				for (ClientRunnable c : clients) {
-					c.proxy.addMsg(id, msg);
+					c.clientProxy.addMsg(id, msg);
 				}
 			}
 		}
@@ -294,7 +298,7 @@ public class ServerMain {
 		public void playerHit(int transId) {
 			synchronized (clients) {
 				for (ClientRunnable c : clients) {
-					c.proxy.bulletExploded(transId);
+					c.clientProxy.bulletExploded(transId);
 				}
 			}
 		}
@@ -305,16 +309,21 @@ public class ServerMain {
 			float newy = Model.centrey + (float) (Math.random() * 480 - 240);
 			synchronized (clients) {
 				for (ClientRunnable c : clients) {
-					c.proxy.playerKilled(id, killerId, x, y);
+					c.clientProxy.playerKilled(id, killerId, x, y);
 					// TODO really needs to send delay
-					c.proxy.playerEntered(id, freq, newx, newy, false);
+					c.clientProxy.playerEntered(id, freq, newx, newy, false);
 				}
 			}
 		}
 		
 		@Override
 		public void ping() {
-			proxy.pong();
+			clientProxy.pong();
+		}
+		
+		@Override
+		public String toString() {
+			return String.format("Client[%d,%s]", id, name);
 		}
 		
 	}

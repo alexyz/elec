@@ -24,6 +24,9 @@ import el.fg.*;
  * 
  * <p>Methods specified by ClientCommands interface should not send 
  * the same command back to the server, unless you want an infinite loop
+ * 
+ * <p>There are two types of time - nano seconds represented by long, and seconds 
+ * represented by float. Don't get them confused.
  */
 public class Model implements ClientCommands {
 	
@@ -42,13 +45,11 @@ public class Model implements ClientCommands {
 	private final ArrayList<TransObject> transObjects = new ArrayList<TransObject>();
 	private final QuadMap<BulletObject> transMap = new QuadMap<BulletObject>(new BulletQuadMapKey());
 	private final ActionMap actionMap = new ActionMap();
-	private final ArrayList<FgRunnable> actions = new ArrayList<FgRunnable>();
+	private final ArrayList<FgAction> actions = new ArrayList<FgAction>();
 	private final ModelObject modelObj = new ModelObject();
 	/** The map (fg objects and transients may collide with it) */
 	private final MapBgObject map = new MapBgObject();
-	/** The background (non interacting) */
-	private final StarBgObject stars = new StarBgObject();
-	private final List<BgObject> bgObjects = Arrays.asList(stars, map);
+	private final List<BgObject> bgObjects = new ArrayList<BgObject>();
 	/** talk messages from server */
 	private final ArrayList<Msg> msgs = new ArrayList<Msg>();
 	/** known players */
@@ -79,6 +80,9 @@ public class Model implements ClientCommands {
 	
 	public Model() {
 		clientNanoTime = System.nanoTime();
+		// should really be down to zone
+		bgObjects.add(new StarBgObject2());
+		bgObjects.add(map);
 	}
 	
 	@Override
@@ -101,7 +105,7 @@ public class Model implements ClientCommands {
 	
 	public void sendMsg(String msg) {
 		if (server != null) {
-			server.getProxy().addMsg(msg);
+			server.getServerProxy().addMsg(msg);
 		} else {
 			msgs.add(new Msg(0, "(self)", msg));
 		}
@@ -223,32 +227,39 @@ public class Model implements ClientCommands {
 	 */
 	public void update() {
 		// calculate time and delta time
-		float floatTime, floatTimeDelta;
+		float time, timeDelta;
 		if (server != null) {
 			long t = serverNanoTime + System.nanoTime() - clientNanoTime;
-			floatTime = t / NS_IN_S;
-			floatTimeDelta = floatTime - this.updateTime;
+			time = t / NS_IN_S;
+			timeDelta = time - this.updateTime;
 		} else {
-			floatTime = (System.nanoTime() - this.clientNanoTime) / NS_IN_S;
-			floatTimeDelta = floatTime - this.updateTime;
+			time = (System.nanoTime() - this.clientNanoTime) / NS_IN_S;
+			timeDelta = time - this.updateTime;
 		}
 		
 		// validate times
-		if (floatTimeDelta > 10f) {
+		if (timeDelta > 10f) {
 			System.out.println("server time is " + (serverNanoTime / NS_IN_S));
 			System.out.println("client time is " + ((System.nanoTime() - clientNanoTime) / NS_IN_S));
-			throw new RuntimeException("unexpected time " + floatTime + " delta " + floatTimeDelta);
+			throw new RuntimeException("unexpected time " + time + " delta " + timeDelta);
 		}
 		
-		this.updateTime = floatTime;
+		this.updateTime = time;
+		
+		for (BgObject o : bgObjects) {
+			o.update(time, timeDelta);
+		}
 		
 		// apply actions for focused object
 		if (actions.size() > 0 && (focusObj == modelObj || focusObj.getId() == id)) {
-			for (FgRunnable r : actions) {
-				r.run(focusObj);
-			}
-			if ((floatTime - serverUpdateTime) > 0.125) {
-				forceUpdate = true;
+			for (FgAction r : actions) {
+				// run action
+				if (r.run(focusObj, time, timeDelta)) {
+					// do server update if enough time has passed
+					if ((time - serverUpdateTime) > 0.125) {
+						forceUpdate = true;
+					}
+				}
 			}
 		}
 		
@@ -258,7 +269,7 @@ public class Model implements ClientCommands {
 			while (i.hasNext()) {
 				TransObject o = i.next();
 				int oldx = o.getX(), oldy = o.getY();
-				o.update(floatTime, floatTimeDelta);
+				o.update(time, timeDelta);
 				if (o instanceof BulletObject) {
 					transMap.update((BulletObject) o, oldx, oldy);
 				}
@@ -273,7 +284,7 @@ public class Model implements ClientCommands {
 		}
 
 		for (FgObject o : objects) {
-			o.update(floatTime, floatTimeDelta);
+			o.update(time, timeDelta);
 		}
 		
 		// check if players ship has hit any transients
@@ -284,7 +295,7 @@ public class Model implements ClientCommands {
 			if (l != null) {
 				for (BulletObject obj : l) {
 					if (obj.getFreq() != s.getFreq() && !obj.hitSent) {
-						server.getProxy().playerHit(obj.getId());
+						server.getServerProxy().playerHit(obj.getId());
 						obj.hitSent = true;
 						//FIXME hack until we get proper info types
 						s.setEnergy(s.getEnergy() - 100f);
@@ -297,15 +308,15 @@ public class Model implements ClientCommands {
 			}
 			if (s.getEnergy() < 0) {
 				// wait for server to send message back for explosion
-				server.getProxy().playerKilled(killerId, focusObj.x, focusObj.y);
+				server.getServerProxy().playerKilled(killerId, focusObj.x, focusObj.y);
 			}
 		}
 		
 		// send to server - after possible reflect
 		if (server != null && focusObj instanceof ShipObject && forceUpdate) {
 			// update focused ship on server
-			server.getProxy().update(focusObj.write());
-			serverUpdateTime = floatTime;
+			server.getServerProxy().update(focusObj.write());
+			serverUpdateTime = time;
 			forceUpdate = false;
 		}
 		
@@ -353,7 +364,7 @@ public class Model implements ClientCommands {
 	 * Apply action to focused object (until unactioned)
 	 */
 	public void action(String name) {
-		FgRunnable action = actionMap.get(name);
+		FgAction action = actionMap.get(name);
 		if (action == null)
 			throw new RuntimeException(name);
 		if (!actions.contains(action))
@@ -364,7 +375,7 @@ public class Model implements ClientCommands {
 	 * Stop applying action to focused object
 	 */
 	public void unaction(String name) {
-		FgRunnable action = actionMap.get(name);
+		FgAction action = actionMap.get(name);
 		// check for null as we won't get a null pointer exception otherwise
 		if (action == null) {
 			throw new RuntimeException(name);
@@ -422,7 +433,7 @@ public class Model implements ClientCommands {
 		if (send && server != null && obj instanceof BulletObject) {
 			obj.setId(id * 1000 + transIdSeq);
 			transIdSeq = (transIdSeq + 1) % 1000;
-			server.getProxy().addBullet(obj.write());
+			server.getServerProxy().addBullet(obj.write());
 		}
 	}
 	
@@ -468,7 +479,7 @@ public class Model implements ClientCommands {
 	
 	public void setMapTileReq(int x, int y, int action) {
 		if (server != null) {
-			server.getProxy().setMapTile(x, y, action);
+			server.getServerProxy().setMapTile(x, y, action);
 		} else {
 			map.setMapTile(x, y, action);
 		}
@@ -481,13 +492,13 @@ public class Model implements ClientCommands {
 	
 	public void ping() {
 		pingNanoTime =  System.nanoTime();
-		server.getProxy().ping();
+		server.getServerProxy().ping();
 	}
 	
 	@Override
 	public void pong() {
 		long t = System.nanoTime() - pingNanoTime;
-		System.out.println("ping: " + (t / NS_IN_S));
+		addMsg(0, "ping: " + (t / NS_IN_S));
 	}
 	
 	@Override

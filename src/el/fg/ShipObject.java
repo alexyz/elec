@@ -5,10 +5,10 @@ import static el.phys.FloatMath.*;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.geom.AffineTransform;
 import java.util.StringTokenizer;
 
 import el.ClientMain;
-import el.phys.Circle;
 
 /**
  * Simple subclass of moving object, can draw a ship and spawn bullets
@@ -77,7 +77,7 @@ public class ShipObject extends MovingObject {
 	}
 	
 	@Override
-	protected void paintAuto(Graphics2D g) {
+	public void paint(Graphics2D g) {
 		int r = (int) radius;
 		g.setColor(Color.gray);
 		g.drawOval(-r, -r, r*2, r*2);
@@ -87,24 +87,26 @@ public class ShipObject extends MovingObject {
 			g.drawString(String.format("%.1f", energy), r, -r);
 		}
 		
+		AffineTransform t = g.getTransform();
 		g.rotate(f);
 		g.drawImage(image,(int)-radius,(int)-radius,null);
+		g.setTransform(t);
 	}
 	
 	@Override
-	public void left() {
-		f -= pi / 32f;
+	public void left(float t, float dt) {
+		f -= pi * dt;
 	}
 	
 	@Override
-	public void right() {
-		f += pi / 32f;
+	public void right(float t, float dt) {
+		f += pi * dt;
 	}
 	
 	@Override
-	public void up() {
-		accel(2f);
-		float t = model.getTime();
+	public void up(float t, float dt) {
+		accel(80f * dt);
+		
 		// rate limit
 		if (t - thrusttime > 0.0625) {
 			thrusttime = t;
@@ -120,15 +122,14 @@ public class ShipObject extends MovingObject {
 	}
 	
 	@Override
-	public void down() {
-		accel(-2f);
+	public void down(float t, float dt) {
+		accel(-80f * dt);
 	}
 	
 	@Override
-	public void fire(int n) {
+	public boolean fire(int n, float t, float dt) {
 		Gun gun = guns[n];
 		if (gun != null) {
-			float t = model.getTime();
 			// rate limit
 			if (t - guntime[n] > gun.period) {
 				guntime[n] = t;
@@ -148,6 +149,7 @@ public class ShipObject extends MovingObject {
 				}
 			}
 		}
+		return false;
 	}
 	
 	public void setEnergy(float energy) {

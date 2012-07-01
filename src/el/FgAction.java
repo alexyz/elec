@@ -2,7 +2,7 @@ package el;
 
 import el.fg.FgObject;
 
-abstract class FgRunnable {
-	/** perform action on fg object */
-	abstract void run(FgObject obj);
+abstract class FgAction {
+	/** perform action on fg object. return true if server update required */
+	abstract boolean run(FgObject obj, float t, float dt);
 }

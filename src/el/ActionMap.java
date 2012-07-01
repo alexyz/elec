@@ -7,7 +7,7 @@ import el.fg.FgObject;
 /**
  * actions that a user can perform on a foreground object (ship)
  */
-public class ActionMap extends TreeMap<String,FgRunnable> {
+public class ActionMap extends TreeMap<String,FgAction> {
 	static final String FIRE3 = "fire3";
 	static final String FIRE2 = "fire2";
 	static final String FIRE1 = "fire1";
@@ -17,70 +17,75 @@ public class ActionMap extends TreeMap<String,FgRunnable> {
 	static final String UP = "up";
 
 	public ActionMap() {
-		put(UP, new FgRunnable() {
+		put(UP, new FgAction() {
 			@Override
-			public void run(FgObject obj) {
-				obj.up();
+			boolean run(FgObject obj, float t, float dt) {
+				obj.up(t, dt);
+				return true;
 			}
 			@Override
 			public String toString() {
 				return UP;
 			}
+			
 		});
-		put(DOWN, new FgRunnable() {
+		put(DOWN, new FgAction() {
 			@Override
-			public void run(FgObject obj) {
-				obj.down();
+			boolean run(FgObject obj, float t, float dt) {
+				obj.down(t, dt);
+				return true;
 			}
 			@Override
 			public String toString() {
 				return DOWN;
 			}
 		});
-		put(LEFT, new FgRunnable() {
+		put(LEFT, new FgAction() {
 			@Override
-			public void run(FgObject obj) {
-				obj.left();
+			boolean run(FgObject obj, float t, float dt) {
+				obj.left(t, dt);
+				return true;
 			}
 			@Override
 			public String toString() {
 				return LEFT;
 			}
 		});
-		put(RIGHT, new FgRunnable() {
+		put(RIGHT, new FgAction() {
 			@Override
-			public void run(FgObject obj) {
-				obj.right();
+			boolean run(FgObject obj, float t, float dt) {
+				obj.right(t, dt);
+				return true;
 			}
 			@Override
 			public String toString() {
 				return RIGHT;
 			}
 		});
-		put(FIRE1, new FgRunnable() {
+		put(FIRE1, new FgAction() {
 			@Override
-			public void run(FgObject obj) {
-				obj.fire(0);
+			boolean run(FgObject obj, float t, float dt) {
+				return obj.fire(0, t, dt);
 			}
 			@Override
 			public String toString() {
 				return FIRE1;
 			}
 		});
-		put(FIRE2, new FgRunnable() {
+		put(FIRE2, new FgAction() {
 			@Override
-			public void run(FgObject obj) {
-				obj.fire(1);
+			boolean run(FgObject obj, float t, float dt) {
+				return obj.fire(1, t, dt);
 			}
 			@Override
 			public String toString() {
 				return FIRE2;
 			}
 		});
-		put(FIRE3, new FgRunnable() {
+		put(FIRE3, new FgAction() {
 			@Override
-			public void run(FgObject obj) {
-				obj.fire(2);
+			boolean run(FgObject obj, float t, float dt) {
+				return obj.fire(2, t, dt);
 			}
 			@Override
 			public String toString() {

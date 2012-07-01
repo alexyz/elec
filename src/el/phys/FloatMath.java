@@ -4,6 +4,7 @@ package el.phys;
  * Float precision math methods
  */
 public class FloatMath {
+	
 	private FloatMath() {
 		//
 	}
@@ -55,7 +56,7 @@ public class FloatMath {
 		return (float) Math.toRadians(d);
 	}
 	
-	private static float sq(float s) {
+	public static float sq(float s) {
 		return s * s;
 	}
 	

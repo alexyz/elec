@@ -11,8 +11,12 @@ import java.util.StringTokenizer;
  */
 public class TextProxy implements InvocationHandler {
 	
+	public interface Unproxy {
+		public void call(String line);
+	}
+	
 	/**
-	 * Create proxy for interface and text writer
+	 * Create proxy for converting methods calls on interface into strings
 	 */
 	public static <T> T createProxy(Class<T> iface, PrintWriter pw) {
 		Object proxy = Proxy.newProxyInstance(
@@ -23,15 +27,28 @@ public class TextProxy implements InvocationHandler {
 	}
 	
 	/**
+	 * Create unproxy for converting strings back into method call on real object
+	 */
+	public static <T> Unproxy createUnproxy(final Class<T> iface, final T impl) {
+		return new Unproxy() {
+			private final Method[] methods = iface.getMethods();
+			@Override
+			public void call(String line) {
+				unproxy(methods, impl, line);
+			}
+		};
+	}
+	
+	/**
 	 * Convert string into method call on real implementation
 	 */
-	public static <T> void unproxy(Class<T> iface, T impl, String line) {
+	private static <T> void unproxy(Method[] methods, T impl, String line) {
 		StringTokenizer tokens = new StringTokenizer(line);
 		String methodName = tokens.nextToken();
 		
 		// get the method
 		// should probably cache these
-		Method[] methods = iface.getMethods();
+		//Method[] methods = iface.getMethods();
 		Method method = null;
 		for (Method m : methods) {
 			if (m.getName().equals(methodName)) {
@@ -96,7 +113,7 @@ public class TextProxy implements InvocationHandler {
 				}
 			}
 		}
-		System.out.println("invoke: " + sb);
+		System.out.println("write: " + sb);
 		pw.println(sb);
 		pw.flush();
 		// FIXME exception here will prevent other clients getting called in loop

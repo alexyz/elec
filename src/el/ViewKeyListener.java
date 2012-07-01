@@ -26,10 +26,10 @@ class ViewKeyListener implements KeyListener {
 				model.focusCycle();
 				break;
 			case '[':
-				ClientMain.slower();
+				ClientMain.setDelay(ClientMain.getDelay() + 1);
 				break;
 			case ']':
-				ClientMain.faster();
+				ClientMain.setDelay(ClientMain.getDelay() - 1);
 				break;
 			case '\b':
 				if (buf.length() > 0) {

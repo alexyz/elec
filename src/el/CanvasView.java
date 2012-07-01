@@ -100,9 +100,14 @@ class CanvasView extends Canvas {
 	@Override
 	public void paint(Graphics g_) {
 		Graphics2D g = (Graphics2D) g_;
-		int mxo = getModelX(), myo = getModelY();
+		Object aa = ClientMain.aa ? RenderingHints.VALUE_ANTIALIAS_ON : RenderingHints.VALUE_ANTIALIAS_OFF;
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa);
+		
+		// clear
+		clear(g);
 		
 		// draw bg
+		int mxo = getModelX(), myo = getModelY();
 		for (BgObject bg : model.getBgObjects())
 			bg.paint(g, mxo, myo);
 		
@@ -115,6 +120,14 @@ class CanvasView extends Canvas {
 		paintStatus(g);
 		
 		paintBuffer(g);
+	}
+	
+	private void clear(Graphics2D g) {
+		final int w = g.getClipBounds().width, h = g.getClipBounds().height;
+		g.setBackground(Color.black);
+		// XXX this is REALLY slow on os x
+		// takes about 40% of total render time
+		g.clearRect(0, 0, w, h);
 	}
 	
 	/**

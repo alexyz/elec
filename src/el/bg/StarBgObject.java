@@ -1,15 +1,18 @@
+
 package el.bg;
+
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.util.Random;
 
-
 public class StarBgObject extends BgObject {
+	
 	private static final Color gridColour = new Color(96, 0, 0);
-	static final Random rnd = new Random();
 	final float[][] stars = new float[50][3];
 	final Color[] colours = new Color[stars.length];
+	
 	public StarBgObject() {
+		Random rnd = new Random();
 		for (int n = 0; n < stars.length; n++) {
 			for (int m = 0; m < stars[n].length; m++)
 				stars[n][m] = rnd.nextFloat();
@@ -18,13 +21,16 @@ public class StarBgObject extends BgObject {
 			colours[n] = new Color(r, g, 0);
 		}
 	}
+	
 	@Override
 	public void update(float t, float dt) {
 		// TODO make the stars flicker
 		// TODO make the stars drift a bit as well
 	}
+	
 	@Override
-	public void paint(Graphics2D g, float mx, float my, int w, int h) {
+	public void paint(Graphics2D g, float mx, float my) {
+		int w = g.getClipBounds().width, h = g.getClipBounds().height;
 		g.setBackground(Color.black);
 		g.clearRect(0, 0, w, h);
 		
@@ -45,6 +51,7 @@ public class StarBgObject extends BgObject {
 		paint1(g, (int) mx, (int) my, 512);
 		paint1(g, (int) (mx / 2), (int) (my / 2), 256);
 	}
+	
 	private void paint1(Graphics2D g, int mx, int my, int quadsize) {
 		int w = g.getClipBounds().width, h = g.getClipBounds().height;
 		// get the quadrants
@@ -59,6 +66,7 @@ public class StarBgObject extends BgObject {
 			}
 		}
 	}
+	
 	private void paint2(Graphics2D g, int sx, int sy, int qs) {
 		int w = g.getClipBounds().width, h = g.getClipBounds().height;
 		for (int n = 0; n < stars.length; n++) {

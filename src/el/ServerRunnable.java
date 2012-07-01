@@ -4,7 +4,6 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.charset.Charset;
 
-import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
 import el.serv.ClientCommands;
@@ -22,7 +21,8 @@ public class ServerRunnable implements Runnable {
 	private final BufferedReader br;
 	private final Model model;
 	private final String name;
-	private final ServerCommands proxy;
+	private final ServerCommands serverProxy;
+	private final TextProxy.Unproxy clientUnproxy;
 
 	public ServerRunnable(Socket socket, Model model, String name) throws Exception {
 		this.socket = socket;
@@ -31,23 +31,24 @@ public class ServerRunnable implements Runnable {
 		// create input/output here so it is less likely to throw exception in run
 		OutputStreamWriter osw = new OutputStreamWriter(socket.getOutputStream(), Charset.forName("UTF-8"));
 		PrintWriter pw = new PrintWriter(osw);
-		this.proxy = TextProxy.createProxy(ServerCommands.class, pw);
+		this.serverProxy = TextProxy.createProxy(ServerCommands.class, pw);
 		InputStreamReader isr = new InputStreamReader(socket.getInputStream(), Charset.forName("UTF-8"));
 		this.br = new BufferedReader(isr);
+		this.clientUnproxy = TextProxy.createUnproxy(ClientCommands.class, model);
 	}
 	
 	/**
 	 * server proxy - for calling methods on server
 	 */
-	public ServerCommands getProxy() {
-		return proxy;
+	public ServerCommands getServerProxy() {
+		return serverProxy;
 	}
 	
 	@Override
 	public void run() {
 		try {
 			// have to send name on connect
-			proxy.setName(name);
+			serverProxy.setName(name);
 
 			// read commands from server...
 			String line;
@@ -59,7 +60,7 @@ public class ServerRunnable implements Runnable {
 					@Override
 					public void run() {
 						try {
-							TextProxy.unproxy(ClientCommands.class, model, fline);
+							clientUnproxy.call(fline);
 						} catch (Exception e) {
 							e.printStackTrace(out);
 							ClientMain.handleException("Unproxy", e);

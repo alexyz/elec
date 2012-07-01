@@ -4,7 +4,6 @@ import static el.phys.FloatMath.*;
 import java.util.StringTokenizer;
 
 import el.Model;
-import el.phys.Circle;
 import el.phys.Intersection;
 
 /**
@@ -93,7 +92,7 @@ public abstract class MovingObject extends FgObject  {
 	}
 	
 	/**
-	 * Accelerate in facing direction in pixels/sec
+	 * Accelerate (vx/vy) in facing direction (f) in pixels/sec
 	 */
 	protected void accel(float d) {
 		vx += d * sin(f);

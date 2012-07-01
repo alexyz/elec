@@ -3,8 +3,6 @@ package el.fg;
 import java.awt.Graphics2D;
 import java.util.StringTokenizer;
 
-import el.phys.Circle;
-
 /**
  * Transient object (removed after specified time)
  */

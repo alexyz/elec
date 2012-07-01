@@ -1,5 +1,7 @@
 package el.fg;
 
+import java.awt.Graphics2D;
+
 import el.Model;
 
 /**
@@ -13,23 +15,28 @@ public class ModelObject extends FgObject {
 	}
 	
 	@Override
-	public void down() {
-		y += 5;
+	public void down(float t, float dt) {
+		y += 80 * dt;
 	}
 	
 	@Override
-	public void left() {
-		x -= 5;
+	public void left(float t, float dt) {
+		x -= 80 * dt;
 	}
 	
 	@Override
-	public void right() {
-		x += 5;
+	public void right(float t, float dt) {
+		x += 80 * dt;
 	}
 	
 	@Override
-	public void up() {
-		y -= 5;
+	public void up(float t, float dt) {
+		y -= 80 * dt;
+	}
+	
+	@Override
+	public void paint(Graphics2D g) {
+		//
 	}
 	
 	@Override

@@ -6,7 +6,6 @@ import java.util.StringTokenizer;
 
 import el.phys.Circle;
 import el.Model;
-import el.phys.Intersection;
 
 /**
  * Object with a position, can paint and update and receive input if it has the focus
@@ -103,19 +102,7 @@ public abstract class FgObject extends Circle {
 	/**
 	 * Paint. Do not leave any net transformation in subclass implementation.
 	 */
-	public void paint(Graphics2D g) {
-		AffineTransform t = g.getTransform();
-		paintAuto(g);
-		g.setTransform(t);
-	}
-	
-	/**
-	 * Paint delegate. OK to leave a net transformation in subclass implementation.
-	 */
-	@Deprecated
-	protected void paintAuto(Graphics2D g) {
-		g.drawString(getClass().getSimpleName(), 0, 0);
-	}
+	public abstract void paint(Graphics2D g);
 	
     /** 
      * Update object state for time and delta time in seconds 
@@ -124,48 +111,41 @@ public abstract class FgObject extends Circle {
     	//
     }
     
-    public Intersection intersects(Circle c, float tx, float ty) {
-    	return null;
-    }
-
-    /*
-    public Intersection intersects(float rx1, float ry1, float rx2, float ry2, float rtx, float rty) {
-    	return Intersect.intersect(mx - (width / 2), my - (height / 2), mx + (width / 2), my + (height / 2), rx1, ry1, rx2, ry2, rtx, rty);
-    }
-    */
-    
-    /**
-     * Hit by this transient object
-     * FIXME unused
-     */
-    public void hit(FgObject o) {
-    	System.out.println("hit by " + o);
-    }
-    
     /**
      * User pressed up
      */
-	public void up() { }
+	public void up(float t, float td) {
+		//
+	}
 	
 	/**
      * User pressed down
      */
-	public void down() { }
+	public void down(float t, float td) {
+		//
+	}
 	
 	/**
      * User pressed left
      */
-	public void left() { }
+	public void left(float t, float td) {
+		//
+	}
 	
 	/**
      * User pressed right
      */
-	public void right() { }
+	public void right(float t, float td) {
+		//
+	}
 	
 	/**
-     * User pressed fire 0-3
+     * User pressed fire 0-3.
+     * return true if server update needed (e.g. for recoil)
      */
-	public void fire(int n) { }
+	public boolean fire(int n, float t, float td) {
+		return false;
+	}
 	
 	@Override
 	public String toString() {
