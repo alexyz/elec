@@ -1,7 +1,6 @@
 package el.fg;
 
 import java.awt.*;
-import java.awt.geom.AffineTransform;
 import java.util.StringTokenizer;
 
 import el.phys.Circle;

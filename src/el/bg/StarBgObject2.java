@@ -9,17 +9,25 @@ import java.util.Random;
 
 import static el.phys.FloatMath.*;
 
+/**
+ * draws a nice parallax star field
+ */
 public class StarBgObject2 extends BgObject {
 	
 	private static final int stars_per_mp = 200;
 	private static final float max_star_depth = 3;
 	private static final int max_star_diam = 3;
 	
+	/** all star data [z, diameter, x] */
 	private final float[][] stars;
+	/** star colours */
 	private final Color[][] colours;
 	private final Random rnd = new Random();
 	
+	/** current stars */
 	private float[][] stars2 = new float[0][];
+	private float lastUpdate;
+	private int paintCount = 0;
 	
 	public StarBgObject2() {
 		
@@ -45,8 +53,6 @@ public class StarBgObject2 extends BgObject {
 		}
 	}
 	
-	float lastUpdate;
-	
 	@Override
 	public void update(float t, float dt) {
 		// TODO make the stars flicker
@@ -56,10 +62,8 @@ public class StarBgObject2 extends BgObject {
 		}
 	}
 	
-	int paintCount = 0;
-	
 	@Override
-	public void paint(Graphics2D g, float mx, float my) {
+	public void paint(Graphics2D g, final float mx, final float my) {
 		final int w = g.getClipBounds().width, h = g.getClipBounds().height;
 		
 		// get screen area in mega pixels (1 max) and adjust number of stars to paint
@@ -78,11 +82,14 @@ public class StarBgObject2 extends BgObject {
 			// don't actually need x or y, though they tend to clump on diagonals
 			// so just add a random x offset
 			float x = s[2] * w;
+			// divide x,y by z to get perspective
 			float z = s[0];
 			int mx2 = (int) ((mx + x) / z), my2 = (int) (my / z);
+			// mod by screen res to get all stars on screen and wrap at edges
 			int sx = mx2 % w, sy = my2 % h;
-			int d = (int) s[1];
+			
 			g.setColor(colours[n][paintCount & 1]);
+			int d = (int) s[1];
 			g.fillOval(w - sx, h - sy, d, d);
 			//g.drawString(" " + n + "," + d, w - sx, h - sy);
 		}
