@@ -49,12 +49,12 @@ public class BulletObject extends TransObject {
 	
 	@Override
 	protected void collision() {
-		if (hit == 1) {
+		if (hit == 4) {
 			reflect = false;
-		} else if (hit > 1) {
+		} /* else if (hit > 4) {
 			remove = true;
 			// FIXME explode on model
-		}
+		} */
 	}
 	
 	@Override

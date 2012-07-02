@@ -5,16 +5,18 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.TreeSet;
 
 import javax.imageio.ImageIO;
 
 import el.Model;
+import el.fg.TransObject;
 import el.phys.Circle;
 import el.phys.FloatMath;
 import el.phys.Intersection;
 import el.phys.Rect;
-import el.phys.Trans;
 import el.phys.cs.CSIntersect;
 
 
@@ -23,8 +25,9 @@ public class ArrayMapBgObject extends MapBgObject {
 	private byte[][] mapArray = new byte[0][0];
 	private BufferedImage[] tileImages;
 	/** position of map in model */
-	private int mapx, mapy;
+	private int mapModelX, mapModelY;
 	private String mapName, tilesName;
+	private final Set<Integer> annoTiles = new TreeSet<Integer>();
 	
 	public ArrayMapBgObject() {
 		// 
@@ -56,8 +59,8 @@ public class ArrayMapBgObject extends MapBgObject {
 			this.tilesName = tilesName;
 			this.mapArray = mapArray;
 			this.tileImages = tileImages;
-			this.mapx = Model.centrex - ((mapArray.length * 16) / 2);
-			this.mapy = Model.centrey - ((mapArray[0].length * 16) / 2);
+			this.mapModelX = Model.centrex - ((mapArray.length * 16) / 2);
+			this.mapModelY = Model.centrey - ((mapArray[0].length * 16) / 2);
 			
 		} catch (IOException e) {
 			e.printStackTrace(System.out);
@@ -83,15 +86,15 @@ public class ArrayMapBgObject extends MapBgObject {
 		int modely = (int) modely_;
 		
 		// get tile number of tile overlapping top left of screen (could be negative)
-		int xotile = (modelx - mapx) / 16;
-		int yotile = (modely - mapy) / 16;
+		int xotile = (modelx - mapModelX) / 16;
+		int yotile = (modely - mapModelY) / 16;
 		
 		g.setColor(Color.gray);
 		g.drawString("x,y=" + xotile + "," + yotile, 5, 100);
 		
 		// get the x,y between origin of that tile and origin of screen
-		int xtileoff = (modelx - mapx) % 16;
-		int ytileoff = (modely - mapy) % 16;
+		int xtileoff = (modelx - mapModelX) % 16;
+		int ytileoff = (modely - mapModelY) % 16;
 		
 		// how many tiles to display on screen
 		int tilesw = (w / 16) + 1;
@@ -119,28 +122,44 @@ public class ArrayMapBgObject extends MapBgObject {
 						}
 					}
 				}
+				
+				/*
+				if (annoTiles.contains((xt << 16) + yt)) {
+					int sx = x * 16 - xtileoff;
+					int sy = y * 16 - ytileoff;
+					g.setColor(Color.yellow);
+					g.drawRect(sx, sy, 16, 16);
+				}
+				*/
 			}
+		}
+	}
+	
+	float lastUpdate;
+	
+	@Override
+	public void update(float t, float dt) {
+		if (t > lastUpdate + 0.5) {
+			lastUpdate = t;
+			annoTiles.clear();
 		}
 	}
 	
 	@Override
 	public Intersection intersects(Circle c, float ctx, float cty) {
-		// loop over all map tiles in dest square
-		// check for ints. with each and keep on with lowest hypot
-		
-		// get top left of trans square
+		// get top left of translated square
 		int rx = (int) (c.x + ctx - c.radius);
 		int ry = (int) (c.y + cty - c.radius);
 		
 		// get tile number of tile overlapping top left of dest square (could be negative)
-		int xotile = (rx - mapx) / 16;
-		int yotile = (ry - mapy) / 16;
+		int xotile = (rx - mapModelX) / 16;
+		int yotile = (ry - mapModelY) / 16;
 		
 		// how many tiles to display on screen
-		int tilesw = (int) ((c.radius * 2) / 16) + 1;
+		// have to do +2 here because int cast rounds down and div rounds down (?)
+		int tilesw = (int) ((c.radius * 2) / 16) + 2;
 		
 		Intersection i = null;
-		float minHypot = Float.MAX_VALUE;
 		
 		// for each tile on screen
 		for (int x = 0; x < tilesw; x++) {
@@ -148,24 +167,39 @@ public class ArrayMapBgObject extends MapBgObject {
 				// is it a valid tile
 				int xt = xotile + x;
 				int yt = yotile + y;
-				if (xt >= 0 && xt < mapArray.length && yt > 0 && yt <= mapArray[0].length) {
+				if (xt >= 0 && xt < mapArray.length && yt > 0 && yt < mapArray[0].length) {
+					
 					int b = mapArray[xt][yt] & 0xff;
 					if (b != 0) {
-						//System.out.println(
-						int mtx = mapx + ((xotile + x) * 16);
-						int mty = mapy + ((yotile + y) * 16);
+						int mtx = mapModelX + ((xotile + x) * 16);
+						int mty = mapModelY + ((yotile + y) * 16);
 						
-						float hypot = FloatMath.hypot(rx - mtx, ry - mty);
-						if (hypot < minHypot) {
-							Rect r = new Rect(mtx, mty, mtx + 16, mty + 16);
-							System.out.println("map tile: " + r + " ship: " + r + " t=" + ctx + "," + cty);
-							i = CSIntersect.intersect(r, c, ctx, cty, 0.95f);
-							System.out.println("collision! " + i);
+						Rect r = new Rect(mtx, mty, mtx + 16, mty + 16);
+						Intersection i2 = CSIntersect.intersect(r, c, ctx, cty, 0.95f);
+						if (i2 != null) {
+							//System.out.println("is: rect " + r + " circ " + c + " t " + ctx + "," + cty);
+							if (i != null) {
+								// two intersections (from different tiles) to choose from, pick one with lowest param
+								if (i2.p < i.p) {
+									i = i2;
+								} else if (i2.p == i.p) {
+									// great, two intersections with same param
+									// stick with first one, though the reflected point might be within another tile
+									System.out.println("equal intersect i=" + i + " i2=" + i2);
+								}
+							} else {
+								i = i2;
+							}
+							
+						} else {
+							// did not find exception
+							annoTiles.add((xt << 16) + yt);
 						}
 					}
 				}
 			}
 		}
+		// XXX may need to reflect reflection...
 		return i;
 	}
 	

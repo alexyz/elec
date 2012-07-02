@@ -1,61 +1,12 @@
 package el.phys.cs;
 
+import el.fg.TransObject;
 import el.phys.*;
 
 /**
  * Moving circle vs fixed square collision detection
  */
 public class CSIntersect {
-	
-	/**
-	 * rotate point around centre of rectangle
-	 */
-	@Deprecated
-	public static Point rotate(Rect r, float theta, Point p) {
-		float rxo = r.x0 + (r.x1 - r.x0) / 2;
-		float ryo = r.y0 + (r.y1 - r.y0) / 2;
-		float x = p.x - rxo;
-		float y = p.y - ryo;
-		float scale = FloatMath.hypot(x, y);
-		float a = FloatMath.atan2(x, y) + theta;
-		float x2 = FloatMath.sin(a) * scale + rxo;
-		float y2 = FloatMath.cos(a) * scale + ryo;
-		return new Point(x2, y2);
-	}
-	
-	// circle : point, rect : point
-	
-	/**
-	 * find intersection with rotated rectangle
-	 */
-	@Deprecated
-	public static Intersection superintersect(Rect r, float theta, Circle c, float tx, float ty, float bounceFactor) {
-		Point p = new Point(c.x, c.y);
-		Point p2 = rotate(r, theta, p);
-		//System.out.println("c " + p + " rotate " + theta + " is " + p2);
-		Circle c2 = new Circle(p2.x, p2.y, c.radius);
-		
-		Point pt = new Point(c.x + tx, c.y + ty);
-		Point pt2 = rotate(r, theta, pt);
-		//System.out.println("ct " + pt + " rotate " + theta + " is " + pt2);
-		
-		float tx2 = pt2.x - p2.x;
-		float ty2 = pt2.y - p2.y;
-		//System.out.println("t " + new Point(tx, ty) + " rotate " + theta + " is " + new Point(tx2, ty2));
-		Intersection i2 = intersect(r, c2, tx2, ty2, bounceFactor);
-		System.out.println("superintersection: " + i2);
-		
-		if (i2 != null) {
-			// this doesn't work
-			
-			Point ip = rotate(r, FloatMath.twopi - theta, new Point(c2.x + i2.itx, c2.y + i2.ity));
-			i2.itx = ip.x - c.x;
-			i2.ity = ip.y - c.y;
-		}
-		
-		return i2;
-	}
-		
 	
 	/**
 	 * Return true if moving circle intersects with fixed orthogonal rectangle.
@@ -74,21 +25,9 @@ public class CSIntersect {
 		// now find values of p for the top, bottom, left and right of square (might not be 0-1)
 		
 		float px0 = (rx0 - c.x) / tx;
-		//_x0 = c.x + tx * px0;
-		//_y0 = c.y + ty * px0;
-
 		float px1 = (rx1 - c.x) / tx;
-		//_x1 = c.x + tx * px1;
-		//_y1 = c.y + ty * px1;
-		
 		float py0 = (ry0 - c.y) / ty;
-		//_x2 = c.x + tx * py0;
-		//_y2 = c.y + ty * py0;
-		
 		float py1 = (ry1 - c.y) / ty;
-		//_x3 = c.x + tx * py1;
-		//_y3 = c.y + ty * py1;
-
 
 		// if parameters for both x and y overlap, it intersects
 		// there are usually two points of intersection (entry and exit), return the one closest to l1 only
@@ -112,7 +51,8 @@ public class CSIntersect {
 		}
 
 		if (!(pxh >= pyl && pxl <= pyh)) {
-			//System.out.println("does not overlap");
+			if (c instanceof TransObject) 
+				System.out.println("does not overlap");
 			return null;
 		}
 
@@ -129,7 +69,8 @@ public class CSIntersect {
 
 		if (p < 0f || p > 1f) {
 			// line would intersect but it is not long enough
-			//System.out.println("does not reach");
+			//if (c instanceof TransObject) 
+				System.out.println("does not reach: p=" + p);
 			return null;
 		}
 
@@ -139,8 +80,9 @@ public class CSIntersect {
 		// but it requires the entire path falls outside the corner radius
 		// not just the intersection point
 		
-		//System.out.println("intersects at " + p);
+		if (c instanceof TransObject) System.out.println("intersects at " + p);
 		Intersection in = new Intersection();
+		in.p = p;
 		in.itx = idx;
 		in.ity = idy;
 		// can only bounce in one axis...

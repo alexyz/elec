@@ -17,8 +17,12 @@ public class Intersection {
 	 * Reflection vector modifier (either 1 or -1)
 	 */
 	public float vx, vy;
+	/**
+	 * intersection parameter
+	 */
+	public float p;
 	@Override
 	public String toString() {
-		return String.format("Ref[i=%f,%f r=%f,%f v=%f,%f", itx, ity, rtx, rty, vx, vy);
+		return String.format("Is[p=%f i=%.1f,%.1f r=%.1f,%f v=%.1f,%.1f]", p, itx, ity, rtx, rty, vx, vy);
 	}
 }
