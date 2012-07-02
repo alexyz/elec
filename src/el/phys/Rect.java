@@ -24,4 +24,10 @@ public class Rect {
 	public float height() {
 		return y1 - y0;
 	}
+	
+	@Override
+	public String toString() {
+		// TODO Auto-generated method stub
+		return String.format("Rect[%.1f,%.1f-%.1f,%.1f]", x0, y0, x1, y1);
+	}
 }

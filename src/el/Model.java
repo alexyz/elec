@@ -48,7 +48,7 @@ public class Model implements ClientCommands {
 	private final ArrayList<FgAction> actions = new ArrayList<FgAction>();
 	private final ModelObject modelObj = new ModelObject();
 	/** The map (fg objects and transients may collide with it) */
-	private final MapBgObject map = new MapBgObject();
+	private final MapBgObject map;
 	private final List<BgObject> bgObjects = new ArrayList<BgObject>();
 	/** talk messages from server */
 	private final ArrayList<Msg> msgs = new ArrayList<Msg>();
@@ -82,6 +82,8 @@ public class Model implements ClientCommands {
 		clientNanoTime = System.nanoTime();
 		// should really be down to zone
 		bgObjects.add(new StarBgObject2());
+		map = new ArrayMapBgObject();
+		//map.read("extra/alpha.lvl.map.png extra/alpha.lvl.tiles.png");
 		bgObjects.add(map);
 	}
 	
@@ -474,7 +476,7 @@ public class Model implements ClientCommands {
 	
 	@Override
 	public void setMapData(String data) {
-		map.read(new StringTokenizer(data));
+		map.read(data);
 	}
 	
 	public void setMapTileReq(int x, int y, int action) {

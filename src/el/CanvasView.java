@@ -100,7 +100,7 @@ class CanvasView extends Canvas {
 	@Override
 	public void paint(Graphics g_) {
 		Graphics2D g = (Graphics2D) g_;
-		Object aa = ClientMain.aa ? RenderingHints.VALUE_ANTIALIAS_ON : RenderingHints.VALUE_ANTIALIAS_OFF;
+		Object aa = ClientMain.getInstance().aa ? RenderingHints.VALUE_ANTIALIAS_ON : RenderingHints.VALUE_ANTIALIAS_OFF;
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa);
 		
 		// clear
@@ -200,10 +200,10 @@ class CanvasView extends Canvas {
 		int lh = g.getFontMetrics().getHeight();
 		g.setColor(Color.lightGray);
 		
-		g.drawLine(0,0,(int)(getWidth() * ClientMain.busy),0);
+		g.drawLine(0,0,(int)(getWidth() * ClientMain.getInstance().busy),0);
 		
 		long fm = Runtime.getRuntime().freeMemory();
-		int delay = ClientMain.getDelay();
+		int delay = ClientMain.getInstance().getDelay();
 		float fps = 1000f / delay;
 		
 		g.drawString(String.format("Main[delay=%dms fps=%.1f freemem=%.0fMB]",

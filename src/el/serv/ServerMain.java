@@ -6,7 +6,9 @@ import java.net.*;
 import java.nio.charset.Charset;
 
 import el.Model;
+import el.bg.ArrayMapBgObject;
 import el.bg.MapBgObject;
+import el.bg.SparseMapBgObject;
 
 /**
  * electron server 2
@@ -27,7 +29,7 @@ public class ServerMain {
 	/**
 	 * Current map state
 	 */
-	private final MapBgObject map = new MapBgObject();
+	private final MapBgObject map;
 	
 	private int nextClientId = 1000;
 	
@@ -39,7 +41,9 @@ public class ServerMain {
 	 * Create a new server
 	 */
 	public ServerMain() {
-		map.init();
+		map = new ArrayMapBgObject();
+		map.read("extra/alpha.lvl.map.png extra/alpha.lvl.tiles.png");
+		//map.init();
 		startTime = System.nanoTime();
 	}
 	
@@ -160,7 +164,7 @@ public class ServerMain {
 			clientProxy.setTime(time());
 			
 			// send map
-			clientProxy.setMapData(map.write(new StringBuilder()).toString());
+			clientProxy.setMapData(map.write());
 			
 			synchronized (clients) {
 				for (ClientRunnable c : clients) {

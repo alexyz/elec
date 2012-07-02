@@ -19,6 +19,7 @@ class ViewKeyListener implements KeyListener {
 	@Override
 	public void keyTyped(KeyEvent e) {
 		//System.out.println("typed '" + e.getKeyChar() + "'");
+		ClientMain f = ClientMain.getInstance();
 		char c = e.getKeyChar();
 		switch (c) {
 			case '¤':
@@ -26,10 +27,10 @@ class ViewKeyListener implements KeyListener {
 				model.focusCycle();
 				break;
 			case '[':
-				ClientMain.setDelay(ClientMain.getDelay() + 1);
+				f.setDelay(f.getDelay() + 1);
 				break;
 			case ']':
-				ClientMain.setDelay(ClientMain.getDelay() - 1);
+				f.setDelay(f.getDelay() - 1);
 				break;
 			case '\b':
 				if (buf.length() > 0) {

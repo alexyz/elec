@@ -80,7 +80,7 @@ public class ServerRunnable implements Runnable {
 			e.printStackTrace();
 		}
 		
-		ClientMain.disconnect();
+		ClientMain.getInstance().disconnect();
 	}
 	
 }

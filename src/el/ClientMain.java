@@ -17,42 +17,46 @@ import javax.swing.*;
 
 // create frame, view and model
 // should probably be subclass of JFrame and have getInstance method
-public class ClientMain {
+public class ClientMain extends JFrame {
 	
 	public static final String SHIP1_IMAGE = "/img/ship1.png";
 	public static final String TILE1_IMAGE = "/img/tile1.png";
 	
-	// global information
-	public static float busy;
-	public static boolean aa = true;
-	public static boolean grid;
-	
 	private static final PrintStream out = System.out;
 	private static final Map<String, Image> images = new HashMap<String, Image>();
-	private static final Model model = new Model();
-	private static final CanvasView view = new CanvasView(model);
+	private static ClientMain frame;
 	
-	private static JFrame frame;
-	private static Timer timer;
-	private static ServerRunnable server;
+	public static ClientMain getInstance() {
+		return frame;
+	}
+	
+	// global information
+	public float busy;
+	public boolean aa = true;
+	public boolean grid;
+	
+	private final Model model = new Model();
+	private final CanvasView view = new CanvasView(model);
+	
+	private Timer timer;
+	private ServerRunnable server;
+	
 	
 	public static void main(String[] args) {
-		
 		out.println("dir: " + System.getProperty("user.dir"));
+		frame = new ClientMain();
+		frame.setVisible(true);
+	}
+	
+	public ClientMain() {
+		setTitle("Electron");
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setJMenuBar(createMenuBar());
 		
 		final JPanel p = new JPanel(new BorderLayout());
 		p.add(view, BorderLayout.CENTER);
-		
-		JFrame f = new JFrame();
-		f.setTitle("Electron");
-		// TODO OS X doesn't close connection, should do manually
-		f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		f.setJMenuBar(createMenuBar());
-		f.setContentPane(p);
-		f.pack();
-		f.setVisible(true);
-		
-		frame = f;
+		setContentPane(p);
+		pack();
 		
 		timer = new Timer(25, new ActionListener() {
 			@Override
@@ -120,13 +124,13 @@ public class ClientMain {
 		System.exit(-1);
 	}
 	
-	public static void disconnect() {
+	public void disconnect() {
 		JOptionPane.showMessageDialog(frame, "Disconnected", "Disconnect", JOptionPane.WARNING_MESSAGE);
 		model.setServer(null);
 		server = null;
 	}
 	
-	private static JMenuBar createMenuBar() {
+	private JMenuBar createMenuBar() {
 		JMenuItem connectMenuItem = new JMenuItem("Connect (localhost/8111)");
 		connectMenuItem.addActionListener(new ActionListener() {
 			@Override
@@ -147,7 +151,7 @@ public class ClientMain {
 					
 					// should create new model and view at this point
 					model.setServer(server);
-					ClientMain.server = server;
+					ClientMain.this.server = server;
 					frame.setTitle("Electron - " + name);
 					
 					// start - sends name and starts listening
@@ -244,15 +248,26 @@ public class ClientMain {
 	/**
 	 * Reduce frame rate
 	 */
-	public static void setDelay(int delay) {
+	public void setDelay(int delay) {
 		timer.setDelay(delay);
 	}
 	
 	/**
 	 * Get delay between frames
 	 */
-	public static int getDelay() {
+	public int getDelay() {
 		return timer.getDelay();
+	}
+	
+	/**
+	 * Create image suitable for rendering
+	 */
+	public static BufferedImage createImage_(int w, int h) {
+		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		GraphicsDevice gd = ge.getDefaultScreenDevice();
+		GraphicsConfiguration gc = gd.getDefaultConfiguration();
+		BufferedImage image = gc.createCompatibleImage(w, h, Transparency.BITMASK);
+		return image;
 	}
 	
 	/**
@@ -265,10 +280,8 @@ public class ClientMain {
 			System.out.println("loading image " + u);
 			try {
 				BufferedImage i = ImageIO.read(u);
-				GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-				GraphicsDevice gd = ge.getDefaultScreenDevice();
-				GraphicsConfiguration gc = gd.getDefaultConfiguration();
-				image = gc.createCompatibleImage(i.getWidth(), i.getHeight(), Transparency.BITMASK);
+				// XXX createImage or createImage_ ?
+				image = createImage_(i.getWidth(), i.getHeight());
 				image.getGraphics().drawImage(i, 0, 0, null);
 				images.put(name, image);
 			} catch (IOException e) {
