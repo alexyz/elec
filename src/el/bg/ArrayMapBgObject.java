@@ -12,22 +12,30 @@ import java.util.TreeSet;
 import javax.imageio.ImageIO;
 
 import el.Model;
-import el.fg.TransObject;
 import el.phys.Circle;
-import el.phys.FloatMath;
 import el.phys.Intersection;
 import el.phys.Rect;
 import el.phys.cs.CSIntersect;
 
-
+/**
+ * A subspace-style map that stores the maps tiles in an array
+ */
 public class ArrayMapBgObject extends MapBgObject {
 	
+	private static final int tilesz = 16;
+	
+	/** the map data, never null */
 	private byte[][] mapArray = new byte[0][0];
+	/** the map tile images, possibly null */
 	private BufferedImage[] tileImages;
 	/** position of map in model */
 	private int mapModelX, mapModelY;
+	/** map and tiles file name */
 	private String mapName, tilesName;
+	/** debugging - annotated tiles */
 	private final Set<Integer> annoTiles = new TreeSet<Integer>();
+	
+	float lastUpdate;
 	
 	public ArrayMapBgObject() {
 		// 
@@ -39,7 +47,7 @@ public class ArrayMapBgObject extends MapBgObject {
 	@Override
 	public void read(String data) {
 		try {
-			// map.png tiles.png
+			// "map.png tiles.png"
 			StringTokenizer tokens = new StringTokenizer(data);
 			String mapName = tokens.nextToken();
 			File mapFile = new File(mapName);
@@ -55,12 +63,13 @@ public class ArrayMapBgObject extends MapBgObject {
 			byte[][] mapArray = Lvl.getMapArray(mapImage);
 			BufferedImage[] tileImages = Lvl.getTileImages(tilesImage);
 			
+			// set variables at end in case there were any exceptions
 			this.mapName = mapName;
 			this.tilesName = tilesName;
 			this.mapArray = mapArray;
 			this.tileImages = tileImages;
-			this.mapModelX = Model.centrex - ((mapArray.length * 16) / 2);
-			this.mapModelY = Model.centrey - ((mapArray[0].length * 16) / 2);
+			this.mapModelX = Model.centrex - ((mapArray.length * tilesz) / 2);
+			this.mapModelY = Model.centrey - ((mapArray[0].length * tilesz) / 2);
 			
 		} catch (IOException e) {
 			e.printStackTrace(System.out);
@@ -76,7 +85,7 @@ public class ArrayMapBgObject extends MapBgObject {
 	public void paint(Graphics2D g, float modelx_, float modely_) {
 		int w = g.getClipBounds().width, h = g.getClipBounds().height;
 		if (mapArray.length == 0) {
-			g.setColor(Color.white);
+			g.setColor(Color.gray);
 			g.drawString("no map data", w / 2, h / 2);
 			return;
 		}
@@ -86,19 +95,19 @@ public class ArrayMapBgObject extends MapBgObject {
 		int modely = (int) modely_;
 		
 		// get tile number of tile overlapping top left of screen (could be negative)
-		int xotile = (modelx - mapModelX) / 16;
-		int yotile = (modely - mapModelY) / 16;
+		int xotile = (modelx - mapModelX) / tilesz;
+		int yotile = (modely - mapModelY) / tilesz;
 		
 		g.setColor(Color.gray);
 		g.drawString("x,y=" + xotile + "," + yotile, 5, 100);
 		
 		// get the x,y between origin of that tile and origin of screen
-		int xtileoff = (modelx - mapModelX) % 16;
-		int ytileoff = (modely - mapModelY) % 16;
+		int xtileoff = (modelx - mapModelX) % tilesz;
+		int ytileoff = (modely - mapModelY) % tilesz;
 		
 		// how many tiles to display on screen
-		int tilesw = (w / 16) + 1;
-		int tilesh = (h / 16) + 1;
+		int tilesw = (w / tilesz) + 1;
+		int tilesh = (h / tilesz) + 1;
 		
 		// for each tile on screen
 		for (int x = 0; x < tilesw; x++) {
@@ -111,31 +120,30 @@ public class ArrayMapBgObject extends MapBgObject {
 					int b = mapArray[xt][yt] & 0xff;
 					if (b != 0) {
 						// get screen x,y of tile
-						int sx = x * 16 - xtileoff;
-						int sy = y * 16 - ytileoff;
+						int sx = x * tilesz - xtileoff;
+						int sy = y * tilesz - ytileoff;
 						// draw it
 						if (b < tileImages.length) {
 							g.drawImage(tileImages[b - 1], sx, sy, null);
 						} else {
-							g.drawRect(sx, sy, 16, 16);
-							g.drawString(Integer.toHexString(b & 0xff), sx, sy + 16);
+							g.drawRect(sx, sy, tilesz, tilesz);
+							g.drawString(Integer.toHexString(b & 0xff), sx, sy + tilesz);
 						}
 					}
 				}
 				
+				// creates loads of garbage, should iterate over map instead
 				/*
 				if (annoTiles.contains((xt << 16) + yt)) {
-					int sx = x * 16 - xtileoff;
-					int sy = y * 16 - ytileoff;
+					int sx = x * tilesz - xtileoff;
+					int sy = y * tilesz - ytileoff;
 					g.setColor(Color.yellow);
-					g.drawRect(sx, sy, 16, 16);
+					g.drawRect(sx, sy, tilesz, tilesz);
 				}
 				*/
 			}
 		}
 	}
-	
-	float lastUpdate;
 	
 	@Override
 	public void update(float t, float dt) {
@@ -147,17 +155,17 @@ public class ArrayMapBgObject extends MapBgObject {
 	
 	@Override
 	public Intersection intersects(Circle c, float ctx, float cty) {
-		// get top left of translated square
+		// get top left of translated square - rounds down
 		int rx = (int) (c.x + ctx - c.radius);
 		int ry = (int) (c.y + cty - c.radius);
 		
 		// get tile number of tile overlapping top left of dest square (could be negative)
-		int xotile = (rx - mapModelX) / 16;
-		int yotile = (ry - mapModelY) / 16;
+		int xotile = (rx - mapModelX) / tilesz;
+		int yotile = (ry - mapModelY) / tilesz;
 		
 		// how many tiles to display on screen
 		// have to do +2 here because int cast rounds down and div rounds down (?)
-		int tilesw = (int) ((c.radius * 2) / 16) + 2;
+		int tilesw = (int) ((c.radius * 2) / tilesz) + 2;
 		
 		Intersection i = null;
 		
@@ -169,12 +177,15 @@ public class ArrayMapBgObject extends MapBgObject {
 				int yt = yotile + y;
 				if (xt >= 0 && xt < mapArray.length && yt > 0 && yt < mapArray[0].length) {
 					
+					// is it none zero
 					int b = mapArray[xt][yt] & 0xff;
 					if (b != 0) {
-						int mtx = mapModelX + ((xotile + x) * 16);
-						int mty = mapModelY + ((yotile + y) * 16);
+						// get model x,y of tile
+						int mtx = mapModelX + ((xotile + x) * tilesz);
+						int mty = mapModelY + ((yotile + y) * tilesz);
 						
-						Rect r = new Rect(mtx, mty, mtx + 16, mty + 16);
+						// should be image size rather than tile size
+						Rect r = new Rect(mtx, mty, mtx + tilesz, mty + tilesz);
 						Intersection i2 = CSIntersect.intersect(r, c, ctx, cty, 0.95f);
 						if (i2 != null) {
 							//System.out.println("is: rect " + r + " circ " + c + " t " + ctx + "," + cty);
@@ -192,13 +203,14 @@ public class ArrayMapBgObject extends MapBgObject {
 							}
 							
 						} else {
-							// did not find exception
-							annoTiles.add((xt << 16) + yt);
+							// did not find intersection
+							//annoTiles.add((xt << 16) + yt);
 						}
 					}
 				}
 			}
 		}
+		
 		// XXX may need to reflect reflection...
 		return i;
 	}
