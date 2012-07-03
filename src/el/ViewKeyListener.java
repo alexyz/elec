@@ -19,7 +19,7 @@ class ViewKeyListener implements KeyListener {
 	@Override
 	public void keyTyped(KeyEvent e) {
 		//System.out.println("typed '" + e.getKeyChar() + "'");
-		ClientMain f = ClientMain.getInstance();
+		ClientFrame f = ClientFrame.getInstance();
 		char c = e.getKeyChar();
 		switch (c) {
 			case '¤':

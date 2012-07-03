@@ -3,6 +3,7 @@ package el;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferStrategy;
+import java.awt.image.BufferedImage;
 
 import el.bg.BgObject;
 import el.fg.FgObject;
@@ -100,16 +101,16 @@ class CanvasView extends Canvas {
 	@Override
 	public void paint(Graphics g_) {
 		Graphics2D g = (Graphics2D) g_;
-		Object aa = ClientMain.getInstance().aa ? RenderingHints.VALUE_ANTIALIAS_ON : RenderingHints.VALUE_ANTIALIAS_OFF;
+		Object aa = ClientFrame.getInstance().aa ? RenderingHints.VALUE_ANTIALIAS_ON : RenderingHints.VALUE_ANTIALIAS_OFF;
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa);
 		
 		// clear
 		clear(g);
 		
 		// draw bg
-		int mxo = getModelX(), myo = getModelY();
+		int modelxo = getModelX(), modelyo = getModelY();
 		for (BgObject bg : model.getBgObjects())
-			bg.paint(g, mxo, myo);
+			bg.paint(g, modelxo, modelyo);
 		
 		// draw ships
 		paintfg(g, model.getFgObjects());
@@ -120,6 +121,8 @@ class CanvasView extends Canvas {
 		paintStatus(g);
 		
 		paintBuffer(g);
+		
+		paintRadar(g, modelxo, modelyo);
 	}
 	
 	private void clear(Graphics2D g) {
@@ -137,7 +140,7 @@ class CanvasView extends Canvas {
 		int h = g.getFontMetrics().getHeight();
 		int y = getHeight() - h;
 		if (keyl.buf.length() > 0) {
-			// totally arbitatary guess to get box to go around string
+			// totally arbitrary guess to get box to go around string
 			g.drawRect(5, y - h + 2, getWidth() - 10, h);
 			g.drawString(keyl.buf.toString(), 10, y);
 			y -= h;
@@ -200,10 +203,10 @@ class CanvasView extends Canvas {
 		int lh = g.getFontMetrics().getHeight();
 		g.setColor(Color.lightGray);
 		
-		g.drawLine(0,0,(int)(getWidth() * ClientMain.getInstance().busy),0);
+		g.drawLine(0,0,(int)(getWidth() * ClientFrame.getInstance().busy),0);
 		
 		long fm = Runtime.getRuntime().freeMemory();
-		int delay = ClientMain.getInstance().getDelay();
+		int delay = ClientFrame.getInstance().getDelay();
 		float fps = 1000f / delay;
 		
 		g.drawString(String.format("Main[delay=%dms fps=%.1f freemem=%.0fMB]",
@@ -218,6 +221,24 @@ class CanvasView extends Canvas {
 			int my = getModelY() + mousePoint.y;
 			g.drawString("Mouse " + mx + ", " + my, 5, lh * 5 + 5);
 		}
+	}
+	
+	private void paintRadar(Graphics2D g, float modelx, float modely) {
+		int w = getWidth();
+		int h = getHeight();
+		int rw = (int) (w * 0.20f), rh = (int) (h * 0.20f);
+		int x = w - rw - 5, y = h - rh - 5; 
+		g.setColor(Color.gray);
+		BufferedImage im = model.getMap().getRadarImage(modelx - w, modely - h, w * 3, h * 3);
+		if (im != null) {
+			g.drawImage(im, x, y, rw, rh, null);
+		} else {
+			g.drawString("no radar", x + 50, y + 50);
+		}
+		
+		// TODO now paint radar objects...
+		
+		g.drawRect(x, y, rw, rh);
 	}
 	
 	@Override

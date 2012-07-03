@@ -4,7 +4,7 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.util.StringTokenizer;
 
-import el.ClientMain;
+import el.ClientFrame;
 import el.phys.Circle;
 import el.phys.Intersection;
 import el.phys.Rect;
@@ -28,7 +28,7 @@ public class Tile extends Rect {
 	
 	public Tile(int x, int y) {
 		super(x, y, x + 32, y + 32);
-		image = ClientMain.getImage(ClientMain.TILE1_IMAGE);
+		image = ClientFrame.getImage(ClientFrame.TILE1_IMAGE);
 	}
 	
 	/**

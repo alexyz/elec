@@ -7,7 +7,7 @@ import java.io.*;
 
 import javax.imageio.ImageIO;
 
-import el.ClientMain;
+import el.ClientFrame;
 
 /**
  * small program to read subspace lvl files and write the tileset and
@@ -27,7 +27,7 @@ public class Lvl {
 			for (int x = 0; x < 304; x+=16) {
 				// get image for graphics device
 				// XXX getinstance?
-				BufferedImage im = ClientMain.createImage_(16, 16);
+				BufferedImage im = ClientFrame.createImageA(16, 16);
 				Graphics g = im.getGraphics();
 				g.drawImage(tilesImage, -x, -y, null);
 				tileImages[n++] = im;

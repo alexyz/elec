@@ -15,40 +15,52 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
-// create frame, view and model
-// should probably be subclass of JFrame and have getInstance method
-public class ClientMain extends JFrame {
+import el.serv.ServerMain;
+
+/**
+ * Application frame and main method
+ */
+public class ClientFrame extends JFrame {
 	
 	public static final String SHIP1_IMAGE = "/img/ship1.png";
 	public static final String TILE1_IMAGE = "/img/tile1.png";
 	
-	private static final PrintStream out = System.out;
 	private static final Map<String, Image> images = new HashMap<String, Image>();
-	private static ClientMain frame;
 	
-	public static ClientMain getInstance() {
+	private static ClientFrame frame;
+	
+	public static ClientFrame getInstance() {
 		return frame;
 	}
 	
-	// global information
+	//
+	// instance stuff
+	//
+	
+	/** render time / timer duration ratio */
 	public float busy;
+	/** anti aliasing enabled */
 	public boolean aa = true;
+	/** map grid lines */
 	public boolean grid;
 	
 	private final Model model = new Model();
 	private final CanvasView view = new CanvasView(model);
 	
+	/** view repaint timer */
 	private Timer timer;
+	/** server connection */
 	private ServerRunnable server;
 	
-	
 	public static void main(String[] args) {
-		out.println("dir: " + System.getProperty("user.dir"));
-		frame = new ClientMain();
+		System.out.println("user.dir: " + System.getProperty("user.dir"));
+		// this should be false, looks terrible
+		System.out.println("sun.java2d.opengl: " + System.getProperty("sun.java2d.opengl"));
+		frame = new ClientFrame();
 		frame.setVisible(true);
 	}
 	
-	public ClientMain() {
+	public ClientFrame() {
 		setTitle("Electron");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setJMenuBar(createMenuBar());
@@ -71,8 +83,8 @@ public class ClientMain extends JFrame {
 					view.paintImmediately(0, 0, view.getWidth(), view.getHeight());
 					
 				} catch (Exception ex) {
-					ex.printStackTrace(out);
-					ClientMain.handleException("Timer", ex);
+					ex.printStackTrace(System.out);
+					ClientFrame.handleException("Timer", ex);
 				}
 				
 				long endt = System.nanoTime();
@@ -104,8 +116,14 @@ public class ClientMain extends JFrame {
 					System.out.println("canvas view buffer page flipping: " + c.isPageFlipping());
 					System.out.println("canvas view buffer back buffer accel: " + c.getBackBufferCapabilities().isAccelerated());
 					System.out.println("canvas view buffer front buffer accel: " + c.getFrontBufferCapabilities().isAccelerated());
+					
+					// type 0 is custom, 1 is INT_RGB
+					System.out.println("static image: " + createImageA(100,100));
+					System.out.println("frame image: " + createImage(100,100));
+					System.out.println("canvas image: " + view.createImage(100,100));
+					
 				} catch (Exception e) {
-					e.printStackTrace(out);
+					e.printStackTrace(System.out);
 					handleException("Init", e);
 				}
 			}
@@ -117,7 +135,7 @@ public class ClientMain extends JFrame {
 	 * display dialog and exit
 	 */
 	public static void handleException(String title, Exception e) {
-		JOptionPane.showMessageDialog(ClientMain.frame, 
+		JOptionPane.showMessageDialog(ClientFrame.frame, 
 				e.toString(), // + ": " + e.getMessage(), 
 				title, 
 				JOptionPane.ERROR_MESSAGE);
@@ -131,7 +149,24 @@ public class ClientMain extends JFrame {
 	}
 	
 	private JMenuBar createMenuBar() {
-		JMenuItem connectMenuItem = new JMenuItem("Connect (localhost/8111)");
+		
+		JMenuItem createServerMenuItem = new JMenuItem("Start local server");
+		createServerMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					ServerMain server = new ServerMain(8111);
+					Thread t = new Thread(server, "ServerThread");
+					t.setPriority(Thread.NORM_PRIORITY);
+					t.setDaemon(true);
+					t.start();
+				} catch (Exception ex) {
+					JOptionPane.showMessageDialog(frame, ex.toString());
+				}
+			}
+		});
+		
+		JMenuItem connectMenuItem = new JMenuItem("Connect to local server");
 		connectMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -142,7 +177,7 @@ public class ClientMain extends JFrame {
 					}
 					
 					String name = JOptionPane.showInputDialog(frame, "Enter name", "Connect", JOptionPane.QUESTION_MESSAGE);
-					if (name.length() == 0) {
+					if (name == null || name.length() == 0) {
 						return;
 					}
 					
@@ -151,7 +186,7 @@ public class ClientMain extends JFrame {
 					
 					// should create new model and view at this point
 					model.setServer(server);
-					ClientMain.this.server = server;
+					ClientFrame.this.server = server;
 					frame.setTitle("Electron - " + name);
 					
 					// start - sends name and starts listening
@@ -211,20 +246,13 @@ public class ClientMain extends JFrame {
 			}
 		});
 		
-		JMenu serverMenu = new JMenu("Server");
-		serverMenu.add(connectMenuItem);
-		serverMenu.add(enterReqMenuItem);
-		serverMenu.add(specMenuItem);
-		serverMenu.add(pingMenuItem);
-		
-		final JCheckBoxMenuItem gridMenuItem = new JCheckBoxMenuItem("Map Grid");
-		gridMenuItem.addActionListener(new ActionListener() {
+		final JMenuItem consoleMenuItem = new JMenuItem("Console");
+		consoleMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				grid = gridMenuItem.isSelected();
+				ConsoleFrame.getInstance().setVisible(true);
 			}
 		});
-		gridMenuItem.setSelected(grid);
 		
 		final JCheckBoxMenuItem aaMenuItem = new JCheckBoxMenuItem("Anti-alias");
 		aaMenuItem.addActionListener(new ActionListener() {
@@ -235,9 +263,27 @@ public class ClientMain extends JFrame {
 		});
 		aaMenuItem.setSelected(aa);
 		
+		final JMenuItem aboutMenuItem = new JMenuItem("About");
+		aboutMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JOptionPane.showMessageDialog(frame, "http://github.com/alexyz/elec");
+			}
+		});
+		
+		//
+		
+		JMenu serverMenu = new JMenu("Server");
+		serverMenu.add(createServerMenuItem);
+		serverMenu.add(connectMenuItem);
+		serverMenu.add(enterReqMenuItem);
+		serverMenu.add(specMenuItem);
+		serverMenu.add(pingMenuItem);
+		
 		JMenu localMenu = new JMenu("Local");
-		localMenu.add(gridMenuItem);
+		localMenu.add(consoleMenuItem);
 		localMenu.add(aaMenuItem);
+		localMenu.add(aboutMenuItem);
 		
 		JMenuBar menuBar = new JMenuBar();
 		menuBar.add(serverMenu);
@@ -262,7 +308,8 @@ public class ClientMain extends JFrame {
 	/**
 	 * Create image suitable for rendering
 	 */
-	public static BufferedImage createImage_(int w, int h) {
+	public static BufferedImage createImageA(int w, int h) {
+		// JFrame.createImage create image without alpha transparency, which isn't useful
 		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		GraphicsDevice gd = ge.getDefaultScreenDevice();
 		GraphicsConfiguration gc = gd.getDefaultConfiguration();
@@ -273,16 +320,17 @@ public class ClientMain extends JFrame {
 	/**
 	 * Get cached image
 	 */
-	public static Image getImage(String name) {
+	public static synchronized Image getImage(String name) {
 		Image image = images.get(name);
 		if (image == null) {
-			URL u = ClientMain.class.getResource(name);
+			URL u = ClientFrame.class.getResource(name);
 			System.out.println("loading image " + u);
 			try {
 				BufferedImage i = ImageIO.read(u);
-				// XXX createImage or createImage_ ?
-				image = createImage_(i.getWidth(), i.getHeight());
-				image.getGraphics().drawImage(i, 0, 0, null);
+				image = createImageA(i.getWidth(), i.getHeight());
+				Graphics g = image.getGraphics();
+				g.drawImage(i, 0, 0, null);
+				g.dispose();
 				images.put(name, image);
 			} catch (IOException e) {
 				throw new RuntimeException(e);

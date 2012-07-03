@@ -8,7 +8,7 @@ import java.awt.Image;
 import java.awt.geom.AffineTransform;
 import java.util.StringTokenizer;
 
-import el.ClientMain;
+import el.ClientFrame;
 
 /**
  * Simple subclass of moving object, can draw a ship and spawn bullets
@@ -47,7 +47,7 @@ public class ShipObject extends MovingObject {
 		this.radius = 24;
 		
 		// this should really be cloned from shiptype
-		image = ClientMain.getImage(type.img);
+		image = ClientFrame.getImage(type.img);
 		maxv = type.maxv;
 		xres = type.xres;
 		yres = type.yres;

@@ -2,6 +2,7 @@
 package el.bg;
 
 import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 
 /**
  * Object without a position (e.g. starfield and map)
@@ -15,6 +16,10 @@ public abstract class BgObject {
 	
 	public void update(float t, float dt) {
 		//
+	}
+	
+	public BufferedImage getRadarImage(float modelx, float modely, float modelw, float modelh) {
+		return null;
 	}
 	
 }

@@ -13,13 +13,11 @@ import el.bg.SparseMapBgObject;
 /**
  * electron server 2
  */
-public class ServerMain {
-	
-	private static final PrintStream out = System.out;
+public class ServerMain implements Runnable {
 	
 	public static void main(String[] args) throws Exception {
-		ServerMain server = new ServerMain();
-		server.run(8111);
+		ServerMain server = new ServerMain(8111);
+		server.run();
 	}
 	
 	/**
@@ -30,6 +28,7 @@ public class ServerMain {
 	 * Current map state
 	 */
 	private final MapBgObject map;
+	private final ServerSocket serverSocket;
 	
 	private int nextClientId = 1000;
 	
@@ -38,26 +37,27 @@ public class ServerMain {
 	private int maxFreqs = 3;
 
 	/**
-	 * Create a new server
+	 * Create a new server on the given port
 	 */
-	public ServerMain() {
+	public ServerMain(int port) throws IOException {
 		map = new ArrayMapBgObject();
 		map.read("extra/alpha.lvl.map.png extra/alpha.lvl.tiles.png");
 		//map.init();
 		startTime = System.nanoTime();
+		serverSocket = new ServerSocket(port);
 	}
 	
 	/**
 	 * Run the server
 	 * This method never exits except on server failure
 	 */
-	private void run(int port) {
+	@Override
+	public void run() {
 		try {
-			ServerSocket serverSocket = new ServerSocket(port);
 			while (true) {
-				out.println("listening on " + serverSocket);
+				System.out.println("listening on " + serverSocket);
 				Socket socket = serverSocket.accept();
-				out.println("accepted " + socket);
+				System.out.println("accepted " + socket);
 				//socket.setKeepAlive(true);
 				// disconnect silent clients - need to ping regularly
 				//socket.setSoTimeout(10000);
@@ -71,7 +71,7 @@ public class ServerMain {
 			}
 			
 		} catch (Exception e) {
-			e.printStackTrace(out);
+			e.printStackTrace(System.out);
 		}
 	}
 	
@@ -122,7 +122,7 @@ public class ServerMain {
 			try {
 				// wait for first command from client
 				String line = br.readLine();
-				out.println(this + ": read " + line);
+				System.out.println(this + ": read " + line);
 				
 				if (line != null && line.startsWith("setName ")) {
 					// call method in this class by reflection
@@ -136,16 +136,16 @@ public class ServerMain {
 				
 				// read commands from client...
 				while ((line = br.readLine()) != null) {
-					out.println(this + ": read " + line);
+					System.out.println(this + ": read " + line);
 					// calls ServerCommands method in this class by reflection
 					//TextProxy.unproxy(ServerCommands.class, this, line);
 					serverUnproxy.call(line);
 				}
 				
-				out.println(this + ": end of stream");
+				System.out.println(this + ": end of stream");
 				
 			} catch (Exception e) {
-				out.println(this + ": " + e);
+				System.out.println(this + ": " + e);
 			}
 			
 			deinit();
@@ -154,7 +154,7 @@ public class ServerMain {
 			try {
 				socket.close();
 			} catch (Exception e) {
-				e.printStackTrace(out);
+				e.printStackTrace(System.out);
 			}
 		}
 		
@@ -183,7 +183,7 @@ public class ServerMain {
 			
 			// start sending updates to new client...
 			synchronized (clients) {
-				out.println("adding " + this);
+				System.out.println("adding " + this);
 				clients.add(this);
 			}
 		}
@@ -191,7 +191,7 @@ public class ServerMain {
 		/** remove client after disconnection */
 		private void deinit() {
 			synchronized (clients) {
-				out.println("removing " + this);
+				System.out.println("removing " + this);
 				clients.remove(this);
 				synchronized (clients) {
 					for (ClientRunnable c : clients) {
@@ -255,7 +255,7 @@ public class ServerMain {
 		@Override
 		public void update(String data) {
 			if (!entered) {
-				out.println("client " + this + " not entered!!");
+				System.out.println("client " + this + " not entered!!");
 				clientProxy.addMsg(0, "you are not entered");
 				return;
 			}

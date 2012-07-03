@@ -2,7 +2,7 @@ package el.inf;
 
 import java.util.*;
 
-import el.ClientMain;
+import el.ClientFrame;
 
 
 public class ZoneInfo {
@@ -25,7 +25,7 @@ public class ZoneInfo {
 		
 		ShipType2 type1 = new ShipType2();
 		type1.name = "Eagle";
-		type1.img = ClientMain.SHIP1_IMAGE;
+		type1.img = ClientFrame.SHIP1_IMAGE;
 		type1.maxv = 1000f;
 		type1.xres = 0.9f;
 		type1.yres = 0.9f;

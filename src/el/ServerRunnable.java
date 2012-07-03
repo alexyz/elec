@@ -15,8 +15,6 @@ import el.serv.TextProxy;
  */
 public class ServerRunnable implements Runnable {
 
-	private static final PrintStream out = System.out;
-
 	private final Socket socket;
 	private final BufferedReader br;
 	private final Model model;
@@ -53,7 +51,7 @@ public class ServerRunnable implements Runnable {
 			// read commands from server...
 			String line;
 			while ((line = br.readLine()) != null) {
-				out.println("server: " + line);
+				System.out.println("server: " + line);
 				final String fline = line;
 				// put on event queue so we don't have to synchronize model
 				SwingUtilities.invokeLater(new Runnable() {
@@ -62,16 +60,16 @@ public class ServerRunnable implements Runnable {
 						try {
 							clientUnproxy.call(fline);
 						} catch (Exception e) {
-							e.printStackTrace(out);
-							ClientMain.handleException("Unproxy", e);
+							e.printStackTrace(System.out);
+							ClientFrame.handleException("Unproxy", e);
 						}
 					}
 				});
 			}
 
 		} catch (Exception e) {
-			e.printStackTrace(out);
-			ClientMain.handleException("Server", e);
+			e.printStackTrace(System.out);
+			ClientFrame.handleException("Server", e);
 		}
 
 		try {
@@ -80,7 +78,7 @@ public class ServerRunnable implements Runnable {
 			e.printStackTrace();
 		}
 		
-		ClientMain.getInstance().disconnect();
+		ClientFrame.getInstance().disconnect();
 	}
 	
 }
