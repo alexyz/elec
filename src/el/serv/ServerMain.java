@@ -41,7 +41,7 @@ public class ServerMain implements Runnable {
 	 */
 	public ServerMain(int port) throws IOException {
 		map = new ArrayMapBgObject();
-		map.read("extra/alpha.lvl.map.png extra/alpha.lvl.tiles.png");
+		map.read("/maps/alpha.lvl.map.png /maps/alpha.lvl.tiles.png");
 		//map.init();
 		startTime = System.nanoTime();
 		serverSocket = new ServerSocket(port);

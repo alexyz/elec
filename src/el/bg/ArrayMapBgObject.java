@@ -6,6 +6,7 @@ import java.awt.image.BufferedImage;
 import java.awt.image.RescaleOp;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeSet;
@@ -75,15 +76,14 @@ public class ArrayMapBgObject extends MapBgObject {
 			// "map.png tiles.png"
 			StringTokenizer tokens = new StringTokenizer(data);
 			String mapName = tokens.nextToken();
-			File mapFile = new File(mapName);
-			System.out.println("Map file " + mapFile + " exists: " + mapFile.exists());
-			
+			URL mapUrl = getClass().getResource(mapName);
+			System.out.println("Map file " + mapUrl);
 			String tilesName = tokens.nextToken();
-			File tilesFile = new File(tilesName);
-			System.out.println("Tiles file " + tilesFile + " exists: " + tilesFile.exists());
+			URL tilesUrl = getClass().getResource(tilesName);
+			System.out.println("Tiles file " + tilesUrl);
 			
-			BufferedImage mapImage = ImageIO.read(mapFile);
-			BufferedImage tilesImage = ImageIO.read(tilesFile);
+			BufferedImage mapImage = ImageIO.read(mapUrl);
+			BufferedImage tilesImage = ImageIO.read(tilesUrl);
 			
 			byte[][] mapArray = Lvl.getMapArray(mapImage);
 			BufferedImage[] tileImages = Lvl.getTileImages(tilesImage);
