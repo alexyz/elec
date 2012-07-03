@@ -36,21 +36,14 @@ public class ArrayMapBgObject extends MapBgObject {
 	private String mapName, tilesName;
 	/** debugging - annotated tiles */
 	private final Set<Integer> annoTiles = new TreeSet<Integer>();
-<<<<<<< HEAD
-	
-	float lastUpdate;
-=======
 	/** map image for radar */
 	private BufferedImage mapImage;
 	/** time of last call to update */
 	private float lastUpdate;
->>>>>>> radar, launch server from menu, other stuff
 	
 	public ArrayMapBgObject() {
 		//
 	}
-	
-	public get
 	
 	@Override
 	public BufferedImage getRadarImage(float modelx_, float modely_, float modelw, float modelh) {
@@ -95,8 +88,6 @@ public class ArrayMapBgObject extends MapBgObject {
 			byte[][] mapArray = Lvl.getMapArray(mapImage);
 			BufferedImage[] tileImages = Lvl.getTileImages(tilesImage);
 			
-<<<<<<< HEAD
-=======
 			// convert map image to native
 			BufferedImage mapImage2 = ClientFrame.createImageA(mapImage.getWidth(), mapImage.getHeight());
 			Graphics2D g = mapImage2.createGraphics();
@@ -106,7 +97,6 @@ public class ArrayMapBgObject extends MapBgObject {
 			RescaleOp op = new RescaleOp(2f, 32f, null);
 			op.filter(mapImage2, mapImage2);
 			
->>>>>>> radar, launch server from menu, other stuff
 			// set variables at end in case there were any exceptions
 			this.mapName = mapName;
 			this.tilesName = tilesName;
@@ -114,10 +104,7 @@ public class ArrayMapBgObject extends MapBgObject {
 			this.tileImages = tileImages;
 			this.mapModelX = Model.centrex - ((mapArray.length * tilesz) / 2);
 			this.mapModelY = Model.centrey - ((mapArray[0].length * tilesz) / 2);
-<<<<<<< HEAD
-=======
 			this.mapImage = mapImage2;
->>>>>>> radar, launch server from menu, other stuff
 			
 		} catch (IOException e) {
 			e.printStackTrace(System.out);
@@ -188,11 +175,7 @@ public class ArrayMapBgObject extends MapBgObject {
 					g.setColor(Color.yellow);
 					g.drawRect(sx, sy, tilesz, tilesz);
 				}
-<<<<<<< HEAD
-				*/
-=======
 				 */
->>>>>>> radar, launch server from menu, other stuff
 			}
 		}
 	}
@@ -238,11 +221,7 @@ public class ArrayMapBgObject extends MapBgObject {
 						
 						// should be image size rather than tile size
 						Rect r = new Rect(mtx, mty, mtx + tilesz, mty + tilesz);
-<<<<<<< HEAD
-						Intersection i2 = CSIntersect.intersect(r, c, ctx, cty, 0.95f);
-=======
 						Intersection i2 = CSIntersect.intersect(r, c, ctx, cty, 0.50f);
->>>>>>> radar, launch server from menu, other stuff
 						if (i2 != null) {
 							//System.out.println("is: rect " + r + " circ " + c + " t " + ctx + "," + cty);
 							if (i != null) {

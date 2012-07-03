@@ -1,6 +1,5 @@
 package el.phys.cs;
 
-import el.fg.TransObject;
 import el.phys.*;
 
 /**
@@ -51,13 +50,8 @@ public class CSIntersect {
 		}
 
 		if (!(pxh >= pyl && pxl <= pyh)) {
-<<<<<<< HEAD
-			if (c instanceof TransObject) 
-				System.out.println("does not overlap");
-=======
 			//if (c instanceof TransObject) 
 				//System.out.println("does not overlap");
->>>>>>> radar, launch server from menu, other stuff
 			return null;
 		}
 
@@ -75,11 +69,7 @@ public class CSIntersect {
 		if (p < 0f || p > 1f) {
 			// line would intersect but it is not long enough
 			//if (c instanceof TransObject) 
-<<<<<<< HEAD
-				System.out.println("does not reach: p=" + p);
-=======
 				//System.out.println("does not reach: p=" + p);
->>>>>>> radar, launch server from menu, other stuff
 			return null;
 		}
 
@@ -89,12 +79,8 @@ public class CSIntersect {
 		// but it requires the entire path falls outside the corner radius
 		// not just the intersection point
 		
-<<<<<<< HEAD
-		if (c instanceof TransObject) System.out.println("intersects at " + p);
-=======
 		//if (c instanceof TransObject) 
 			//System.out.println("intersects at " + p);
->>>>>>> radar, launch server from menu, other stuff
 		Intersection in = new Intersection();
 		in.p = p;
 		in.itx = idx;
