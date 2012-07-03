@@ -5,3 +5,10 @@ http://en.wikipedia.org/wiki/SubSpace_(video_game)
 Started around January 2011.
 
 Written in Java 1.6/1.7 using Swing/AWT/Java2D
+
+Main classes are:
+  el.ClientFrame - client
+  el.serv.ServerMain - server
+  el.bg.Lvl - lvl to png converter
+  
+Screen shots and runnable jar provided
