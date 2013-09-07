@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * Renders the model.
- * Has virtually no state of it's own
+ * Has virtually no state of its own
  */
 class CanvasView extends Canvas {
 	
