@@ -10,9 +10,9 @@ Started around January 2011. Updated around July 2012.
 Written in Java 1.6/1.7 using Swing/AWT/Java2D
 
 Main classes are:
-  el.ClientFrame - client
-  el.serv.ServerMain - server
-  el.bg.Lvl - lvl to png converter
+- el.ClientFrame - client
+- el.serv.ServerMain - server
+- el.bg.Lvl - lvl to png converter
   
 Screenshots
 -----------
