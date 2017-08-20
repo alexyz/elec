@@ -3,7 +3,6 @@ Electron
 
 A game based on Subspace, better known as Continuum:
 http://en.wikipedia.org/wiki/SubSpace_(video_game)
-(I used to play as Pen Expers on 17th Parallel).
 
 Started around January 2011. Updated around July 2012.
 
