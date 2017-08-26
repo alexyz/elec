@@ -18,15 +18,15 @@ Screenshots
 
 Ship wandering around the Alpha West map
 
-![Screenshot](https://dl.dropboxusercontent.com/u/8069847/el1.png)
+![Screenshot](el1.png)
 
-![Screenshot](https://dl.dropboxusercontent.com/u/8069847/el2.png)
+![Screenshot](el2.png)
 
 Two ships
 
-![Screenshot](https://dl.dropboxusercontent.com/u/8069847/el4.png)
+![Screenshot](el4.png)
 
 Download
 --------
 
-[Runnable jar file](https://dl.dropboxusercontent.com/u/8069847/el.jar)
+[Runnable jar file](https://www.dropbox.com/s/qby3mf6wp6wluhk/el.jar?dl=0)
